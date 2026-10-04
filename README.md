@@ -192,3 +192,8 @@ Friends shows all joined clubs as stacked cards. Start Club and Join Group
 appear below the weekly group quest, before the list. Each card has an invite
 action and its own Leave Group control; leaving an unselected club does not
 change the currently selected club.
+
+Activity tree now shows all 26 quests and every prerequisite connection in
+one vertically scrollable map. Highlighting a quest emphasizes its ancestors
+without hiding any other nodes or edges. Cards include prerequisite labels,
+update their unlock/completion status and open task details when tapped.

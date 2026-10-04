@@ -23,6 +23,11 @@ void main() {
       expect(find.byKey(const ValueKey('tree-task-3')), findsOneWidget);
       expect(find.byKey(const ValueKey('tree-task-13')), findsOneWidget);
       expect(find.byType(InteractiveViewer), findsNothing);
+      for (final quest in state.quests) {
+        expect(find.byKey(ValueKey('tree-task-${quest.id}')), findsOneWidget);
+      }
+      expect(find.text('Highlight a quest'), findsOneWidget);
+      expect(find.text('All sidequests'), findsOneWidget);
       final q = state.quest(1);
       state.start(q);
       verifyGPS(state, q);

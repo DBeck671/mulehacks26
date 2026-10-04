@@ -26,9 +26,10 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.state,
     builder: (_, _) {
-      final ids = <int>{};
+      final ids = widget.state.quests.map((q) => q.id).toSet();
+      final highlighted = <int>{};
       void include(int id) {
-        if (!ids.add(id)) return;
+        if (!highlighted.add(id)) return;
         for (final parent in questParents[id] ?? <int>[]) {
           include(parent);
         }
@@ -46,14 +47,14 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
           child: PageBody(
             children: [
               const PageHeading(
-                'Find your path',
-                'Follow the connections to unlock your next adventure.',
+                'All sidequests',
+                'Every quest and its unlock connections.',
               ),
               DropdownButtonFormField<int>(
                 initialValue: selected,
                 isExpanded: true,
                 decoration: const InputDecoration(
-                  labelText: 'See unlock path for',
+                  labelText: 'Highlight a quest',
                 ),
                 items: widget.state.quests
                     .map(
@@ -69,7 +70,7 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Complete every connected task above to unlock your goal. Tap a task for details.',
+                'Lines connect prerequisites to the tasks they unlock. Complete every prerequisite. Tap any task for details.',
                 style: TextStyle(color: muted, fontSize: 12, height: 1.5),
               ),
               const SizedBox(height: 24),
@@ -86,12 +87,12 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
                     for (var i = 0; i < row.length; i++) {
                       positions[row[i]] = Rect.fromLTWH(
                         12 + (i % columns) * (width + 12),
-                        y + (i ~/ columns) * 116,
+                        y + (i ~/ columns) * 156,
                         width,
-                        100,
+                        140,
                       );
                     }
-                    y += ((row.length / columns).ceil()) * 116 + 42;
+                    y += ((row.length / columns).ceil()) * 156 + 42;
                   }
                   return SizedBox(
                     height: y - 42,
@@ -99,7 +100,7 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
                       children: [
                         Positioned.fill(
                           child: CustomPaint(
-                            painter: _BranchPainter(positions),
+                            painter: _BranchPainter(positions, highlighted),
                           ),
                         ),
                         ...positions.entries.map((entry) {
@@ -121,7 +122,9 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   side: BorderSide(
-                                    color: q.id == selected ? green : raised,
+                                    color: highlighted.contains(q.id)
+                                        ? green
+                                        : raised,
                                   ),
                                 ),
                                 clipBehavior: Clip.antiAlias,
@@ -176,6 +179,19 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
                                             ),
                                           ),
                                         ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          (questParents[q.id] ?? []).isEmpty
+                                              ? 'Starting quest'
+                                              : 'Requires: ${(questParents[q.id] ?? []).map((id) => widget.state.quest(id).title).join(' + ')}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: muted,
+                                            fontSize: 10,
+                                            height: 1.2,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -205,8 +221,9 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
 }
 
 class _BranchPainter extends CustomPainter {
-  _BranchPainter(this.positions);
+  _BranchPainter(this.positions, this.highlighted);
   final Map<int, Rect> positions;
+  final Set<int> highlighted;
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -238,11 +255,15 @@ class _BranchPainter extends CustomPainter {
         } else {
           path.cubicTo(start.dx, middle, end.dx, middle, end.dx, end.dy);
         }
+        paint.color =
+            (highlighted.contains(child) && highlighted.contains(parent))
+            ? green.withValues(alpha: .8)
+            : muted.withValues(alpha: .5);
         canvas.drawPath(path, paint);
         canvas.drawCircle(
           Offset(end.dx, end.dy - 4),
           3,
-          Paint()..color = green,
+          Paint()..color = paint.color,
         );
       }
     }
