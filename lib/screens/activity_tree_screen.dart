@@ -441,24 +441,35 @@ class _QuestOrb extends StatelessWidget {
                     return Stack(
                       alignment: Alignment.center,
                       children: [
-                        if (related)
+                        if (related || quest.isActive)
                           Container(
+                            key: quest.isActive
+                                ? ValueKey('active-tree-pulse-${quest.id}')
+                                : null,
                             width: 74 + wave * 12,
                             height: 74 + wave * 12,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: quest.color.withValues(
-                                  alpha: .12 + (1 - wave) * .16,
+                                  alpha: quest.isActive
+                                      ? .35 + (1 - wave) * .35
+                                      : .12 + (1 - wave) * .16,
                                 ),
                               ),
                               boxShadow: [
                                 BoxShadow(
                                   color: quest.color.withValues(
-                                    alpha: .06 + wave * .05,
+                                    alpha: quest.isActive
+                                        ? .15 + wave * .15
+                                        : .06 + wave * .05,
                                   ),
-                                  blurRadius: 28,
-                                  spreadRadius: 3,
+                                  blurRadius: quest.isActive
+                                      ? 20 + wave * 12
+                                      : 28,
+                                  spreadRadius: quest.isActive
+                                      ? 2 + wave * 3
+                                      : 3,
                                 ),
                               ],
                             ),
