@@ -1,0 +1,707 @@
+import 'dart:math';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' hide Category;
+
+import 'data/sample_quests.dart';
+import 'data/activity_store.dart';
+import 'models/quest.dart';
+import 'models/completed_activity.dart';
+import 'models/connection.dart';
+import 'models/activity_node.dart';
+import 'models/friend.dart';
+import 'models/group.dart';
+import 'models/party_task.dart';
+import 'models/location_check_in.dart';
+import 'models/verification.dart';
+
+class CompletionResult {
+  CompletionResult(
+    this.quest,
+    this.oldXP,
+    this.newXP,
+    this.unlocked,
+    this.connections,
+  );
+  final Quest quest;
+  final int oldXP, newXP;
+  int get awardedXP => newXP - oldXP;
+  final List<Quest> unlocked;
+  final List<Connection> connections;
+}
+
+// One small ChangeNotifier owns the entire local demo. Screens only read it
+// and call these methods, so tab changes never reset gameplay progress.
+enum JoinGroupResult { joined, alreadyActive, invalidCode, unknownCode }
+
+class AppState extends ChangeNotifier {
+  AppState({Random? recommendationRandom, this.activityStore})
+    : _recommendationRandom = recommendationRandom ?? Random() {
+    player = initialGroup.members.firstWhere((f) => f.id == 0);
+    groups.add(initialGroup);
+    _generatePartyTasks(initialGroup);
+    groups.add(
+      Group(
+        id: 2,
+        name: 'Curiosity Club',
+        members: [...initialGroup.members],
+        groupCode: 'SQ-7319',
+        inviteCode: 'INV-7319',
+      ),
+    );
+  }
+  String profileName = '';
+  String profileGender = 'Prefer not to say';
+  bool get hasProfile => profileName.isNotEmpty;
+  void setProfile(String name, String gender) {
+    final cleaned = name.trim();
+    if (cleaned.isEmpty || cleaned.runes.length > 40) return;
+    profileName = cleaned;
+    profileGender = gender;
+    you.name = cleaned;
+    you.avatarInitial = String.fromCharCode(cleaned.runes.first).toUpperCase();
+    _saveHistory();
+    notifyListeners();
+  }
+
+  final ActivityStore? activityStore;
+  Future<void> _pendingSave = Future.value();
+  bool _disposed = false;
+  bool historySaveFailed = false;
+  Future<void> get historySaved => _pendingSave;
+
+  static Future<AppState> load(ActivityStore store) async {
+    final state = AppState(activityStore: store);
+    try {
+      final stored = await store.read();
+      if (stored == null) return state;
+      final data = jsonDecode(stored) as Map<String, dynamic>;
+      if (data['version'] != 1) throw const FormatException('Unknown history');
+      state.profileName = data['profileName'] as String? ?? '';
+      state.profileGender =
+          data['profileGender'] as String? ?? 'Prefer not to say';
+      if (state.hasProfile) {
+        state.you.name = state.profileName;
+        state.you.avatarInitial = String.fromCharCode(
+          state.profileName.runes.first,
+        ).toUpperCase();
+      }
+      state.showCompletedQuests = data['showCompletedQuests'] as bool? ?? true;
+      state.completedActivities.addAll(
+        (data['activities'] as List).map(
+          (entry) => CompletedActivity.fromJson(entry as Map<String, dynamic>),
+        ),
+      );
+      for (final name in (data['interests'] as List? ?? [])) {
+        final category = Category.values
+            .where((c) => c.name == name)
+            .firstOrNull;
+        if (category != null) state.interests.add(category);
+      }
+      for (final entry in state.completedActivities) {
+        final q = state.quests.where((q) => q.id == entry.questId).firstOrNull;
+        if (q == null) continue;
+        q.isCompleted = true;
+        q.completionCount++;
+        q.earnedXP += entry.xp;
+        q.attemptNumber = max(q.attemptNumber, entry.attempt);
+      }
+      state.completedThisSession = state.completedActivities.length;
+      state.totalXP += state.completedActivities.fold<int>(
+        0,
+        (sum, e) => sum + e.xp,
+      );
+      state.you.xp = 1075 + state.earnedXP;
+      state.you.questsCompleted += state.completedActivities.length;
+      for (final entry in questParents.entries) {
+        if (entry.value.every((id) => state.quest(id).isCompleted)) {
+          state.quest(entry.key).isLocked = false;
+        }
+      }
+      for (final c in state.connections) {
+        if (c.requiredQuestIds.every((id) => state.quest(id).isCompleted)) {
+          c.isDiscovered = true;
+        }
+      }
+      state.recentActivity.addAll(
+        state.completedActivities.map(
+          (e) => 'You completed ${e.title} · +${e.xp} XP',
+        ),
+      );
+      return state;
+    } catch (_) {
+      state.dispose();
+      rethrow; // Keep unreadable storage intact instead of replacing it.
+    }
+  }
+
+  void _saveHistory() {
+    final store = activityStore;
+    if (store == null) return;
+    final snapshot = jsonEncode({
+      'version': 1,
+      'activities': completedActivities.map((e) => e.toJson()).toList(),
+      'interests': interests.map((c) => c.name).toList(),
+      'showCompletedQuests': showCompletedQuests,
+      'profileName': profileName,
+      'profileGender': profileGender,
+    });
+    // Serialize writes so a slower earlier completion cannot replace a newer one.
+    _pendingSave = _pendingSave.then((_) async {
+      try {
+        await store.write(snapshot);
+        historySaveFailed = false;
+      } catch (_) {
+        historySaveFailed = true;
+      }
+      if (!_disposed) notifyListeners();
+    });
+  }
+
+  void retryHistorySave() => _saveHistory();
+  bool showCompletedQuests = true;
+  void setShowCompletedQuests(bool value) {
+    showCompletedQuests = value;
+    _saveHistory();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  final List<Group> groups = [];
+  final Set<int> joinedGroupIds = {1};
+  late final Friend player;
+  int? activeGroupId = 1;
+  bool get hasGroup => activeGroupId != null;
+  Group get group => groups.firstWhere((g) => g.id == activeGroupId);
+  List<Group> get joinedGroups =>
+      groups.where((g) => joinedGroupIds.contains(g.id)).toList();
+  final Map<int, List<int>> groupContributions = {};
+  List<int> get challengeContributions =>
+      groupContributions.putIfAbsent(activeGroupId ?? 0, () => []);
+
+  Group createClub(String input) {
+    final name = input.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (name.length < 2 || name.length > 40) {
+      throw const FormatException('Choose a club name with 2–40 characters.');
+    }
+    final used = groups.map((g) => g.groupCode).toSet();
+    if (used.length >= 9000) {
+      throw const FormatException('No invite codes available.');
+    }
+    final random = Random.secure();
+    String suffix;
+    do {
+      suffix = '${1000 + random.nextInt(9000)}';
+    } while (used.contains('SQ-$suffix'));
+    final club = Group(
+      id: groups.fold<int>(0, (highest, g) => max(highest, g.id)) + 1,
+      name: name,
+      members: [you],
+      groupCode: 'SQ-$suffix',
+      inviteCode: 'INV-$suffix',
+      weeklyChallengeProgress: 0,
+      hostId: you.id,
+    );
+    _generatePartyTasks(club);
+    groups.add(club);
+    joinedGroupIds.add(club.id);
+    activeGroupId = club.id;
+    notifyListeners();
+    return club;
+  }
+
+  JoinGroupResult joinGroup(String input) {
+    final code = input.trim().toUpperCase().replaceAll(RegExp(r'[\s-]'), '');
+    if (!RegExp(r'^(SQ|INV)[0-9]{4}$').hasMatch(code)) {
+      return JoinGroupResult.invalidCode;
+    }
+    final found = groups
+        .where(
+          (g) =>
+              g.groupCode.replaceAll('-', '') == code ||
+              g.inviteCode.replaceAll('-', '') == code,
+        )
+        .firstOrNull;
+    if (found == null) return JoinGroupResult.unknownCode;
+    if (activeGroupId == found.id) return JoinGroupResult.alreadyActive;
+    if (!found.members.any((f) => f.id == 0)) found.members.add(you);
+    if (found.partyTasks.isEmpty) _generatePartyTasks(found);
+    joinedGroupIds.add(found.id);
+    activeGroupId = found.id;
+    notifyListeners();
+    return JoinGroupResult.joined;
+  }
+
+  bool leaveGroup() {
+    if (!hasGroup) return false;
+    final leaving = group;
+    if (_partyAttempt?.groupId == leaving.id) _partyAttempt = null;
+    leaving.members.removeWhere((f) => f.id == 0);
+    joinedGroupIds.remove(leaving.id);
+    activeGroupId = joinedGroupIds.firstOrNull;
+    notifyListeners();
+    return true;
+  }
+
+  void selectGroup(int id) {
+    if (!joinedGroupIds.contains(id) || id == activeGroupId) return;
+    activeGroupId = id;
+    notifyListeners();
+  }
+
+  final quests = sampleQuests();
+  final connections = sampleConnections();
+  final Set<Category> interests = {};
+  int totalXP = 3780;
+  int featuredId = 26;
+  int? highlightedId;
+  int completedThisSession = 0;
+  final List<String> recentActivity = [];
+  final List<CompletedActivity> completedActivities = [];
+
+  final Random _recommendationRandom;
+  Set<int> _lastSuggestions = {};
+
+  List<Quest> suggestedNextTasks(Quest completed) {
+    final candidates =
+        quests
+            .where((q) => q.id != completed.id && !q.isLocked && !q.isActive)
+            .toList()
+          ..shuffle(_recommendationRandom);
+    final choices = candidates.take(3).toList();
+    final selectedIds = choices.map((q) => q.id).toSet();
+    if (candidates.length > 3 && setEquals(selectedIds, _lastSuggestions)) {
+      choices[2] = candidates.firstWhere((q) => !selectedIds.contains(q.id));
+    }
+    choices.shuffle(_recommendationRandom);
+    _lastSuggestions = choices.map((q) => q.id).toSet();
+    return choices;
+  }
+
+  PartyAttempt? _partyAttempt;
+
+  void _generatePartyTasks(Group party) {
+    final candidates = quests.where((q) => !q.isLocked && !q.isActive).toList()
+      ..shuffle();
+    final selected = candidates.take(3).toList();
+    final oldIds = party.partyTasks.map((t) => t.questId).toSet();
+    if (candidates.length > 3 &&
+        setEquals(selected.map((q) => q.id).toSet(), oldIds)) {
+      selected[2] = candidates.firstWhere((q) => !oldIds.contains(q.id));
+    }
+    party.partyTasks
+      ..clear()
+      ..addAll(selected.map((q) => PartyTask(questId: q.id)));
+    party.partyRound++;
+  }
+
+  bool generatePartyTasks() {
+    if (!hasGroup || !group.partyComplete) return false;
+    _generatePartyTasks(group);
+    notifyListeners();
+    return true;
+  }
+
+  bool startPartyTask(int questId) {
+    if (!hasGroup) return false;
+    final task = group.partyTasks
+        .where((t) => t.questId == questId && !t.isCompleted)
+        .firstOrNull;
+    if (task == null) return false;
+    final q = quest(questId);
+    // Evidence from an already active solo/other-party attempt cannot be reused.
+    if (!q.isActive ||
+        _partyAttempt?.groupId != group.id ||
+        _partyAttempt?.round != group.partyRound ||
+        _partyAttempt?.questId != q.id ||
+        _partyAttempt?.attempt != q.attemptNumber) {
+      q.isActive = false;
+      q.verification.reset();
+    }
+    if (!start(q)) return false;
+    _partyAttempt = PartyAttempt(
+      group.id,
+      group.partyRound,
+      q.id,
+      q.attemptNumber,
+    );
+    notifyListeners();
+    return true;
+  }
+
+  final initialGroup = Group(
+    id: 1,
+    name: 'Weekend Warriors',
+    members: [
+      Friend(
+        id: 1,
+        name: 'Alex',
+        xp: 1250,
+        avatarInitial: 'A',
+        questsCompleted: 2,
+      ),
+      Friend(
+        id: 0,
+        name: 'You',
+        xp: 1075,
+        avatarInitial: 'Y',
+        questsCompleted: 2,
+      ),
+      Friend(
+        id: 2,
+        name: 'Jordan',
+        xp: 1100,
+        avatarInitial: 'J',
+        questsCompleted: 1,
+      ),
+      Friend(
+        id: 3,
+        name: 'Sam',
+        xp: 725,
+        avatarInitial: 'S',
+        questsCompleted: 1,
+      ),
+      Friend(
+        id: 4,
+        name: 'Chris',
+        xp: 600,
+        avatarInitial: 'C',
+        questsCompleted: 1,
+      ),
+    ],
+  );
+  int get level => totalXP ~/ 1000 + 1;
+  int get levelXP => totalXP % 1000;
+  int get earnedXP => totalXP - 3780;
+  // Historical demo totals are separate from playable quest prerequisites.
+  int get completedCount => 12 + completedThisSession;
+  int get connectionCount =>
+      6 + connections.where((c) => c.isDiscovered).length;
+  Friend get you => player;
+  List<Friend> get leaderboard => hasGroup
+      ? ([...group.members]..sort((a, b) => b.xp.compareTo(a.xp)))
+      : [];
+  int get rank => hasGroup ? leaderboard.indexWhere((f) => f.id == 0) + 1 : 0;
+  Quest quest(int id) => quests.firstWhere((q) => q.id == id);
+  Quest get featured => quest(featuredId);
+  Quest? get active => quests.where((q) => q.isActive).firstOrNull;
+  double get treeProgress =>
+      quests.where((q) => q.isCompleted).length / quests.length;
+  int categoryCount(Category category) => quests
+      .where((q) => q.categories.contains(category))
+      .fold(0, (sum, q) => sum + q.completionCount);
+
+  void buildPath(Set<Category> selected) {
+    interests.addAll(selected);
+    featuredId =
+        selected.contains(Category.nature) &&
+            selected.contains(Category.creativity)
+        ? 26
+        : quests
+              .firstWhere(
+                (q) => !q.isLocked && q.categories.any(selected.contains),
+              )
+              .id;
+    _saveHistory();
+    notifyListeners();
+  }
+
+  void newQuest() {
+    final available = quests
+        .where((q) => !q.isLocked && !q.isActive && q.id != featuredId)
+        .toList();
+    final personalized = available
+        .where((q) => q.categories.any(interests.contains))
+        .toList();
+    final pool = personalized.isNotEmpty ? personalized : available;
+    if (pool.isNotEmpty) featuredId = pool[Random().nextInt(pool.length)].id;
+    notifyListeners();
+  }
+
+  bool start(Quest q) {
+    if (q.isLocked) return false;
+    if (q.isActive) return true;
+    _partyAttempt = null;
+    q.attemptNumber++;
+    if (q.isCompleted) q.verification.reset();
+    for (final other in quests) {
+      other.isActive = false;
+      other.attemptClock.stop();
+    }
+    q.attemptClock
+      ..reset()
+      ..start();
+    q.isActive = true;
+    q.isNew = false;
+    notifyListeners();
+    return true;
+  }
+
+  bool stop(Quest q) {
+    if (!q.isActive) return false;
+    q.isActive = false;
+    q.attemptNumber++; // Ignore late GPS or photo results from this attempt.
+    q.attemptClock
+      ..stop()
+      ..reset();
+    q.verification.reset();
+    _partyAttempt = null;
+    notifyListeners();
+    return true;
+  }
+
+  bool saveLocation(
+    Quest q,
+    LocationCheckIn reading, {
+    required bool start,
+    int? attempt,
+  }) {
+    if (!q.isActive ||
+        (attempt != null && attempt != q.attemptNumber) ||
+        q.verification.method != VerificationMethod.location ||
+        !reading.isUsable) {
+      return false;
+    }
+    final v = q.verification;
+    if (start) {
+      v.startLocation = reading;
+      v.finishLocation = null;
+    } else {
+      if (v.startLocation == null ||
+          !reading.recordedAt.isAfter(v.startLocation!.recordedAt)) {
+        return false;
+      }
+      v.finishLocation = reading;
+    }
+    v.locationError = null;
+    notifyListeners();
+    return true;
+  }
+
+  void failLocation(Quest q, String message, {required int attempt}) {
+    if (!q.isActive || attempt != q.attemptNumber) return;
+    q.verification.locationError = message;
+    notifyListeners();
+  }
+
+  void resetLocation(Quest q) {
+    if (!q.isActive) return;
+    q.verification.resetLocations();
+    notifyListeners();
+  }
+
+  bool beginRoute(Quest q, LocationCheckIn reading, {required int attempt}) {
+    if (!q.isActive ||
+        q.attemptNumber != attempt ||
+        !q.verification.tracksRoute ||
+        !reading.isUsable ||
+        reading.accuracy > 25) {
+      return false;
+    }
+    final v = q.verification;
+    v.startLocation ??= reading;
+    v.finishLocation = null;
+    v.locationError = null;
+    v.routeFinished = false;
+    v.routeTracking = true;
+    v.routeAnchor = reading;
+    v.lastRouteReading = reading;
+    v.routeSignalMessage = null;
+    notifyListeners();
+    return true;
+  }
+
+  bool recordRoute(Quest q, LocationCheckIn reading, {required int attempt}) {
+    if (!q.isActive ||
+        q.attemptNumber != attempt ||
+        !q.verification.routeTracking) {
+      return false;
+    }
+    final accepted = q.verification.addRouteReading(reading);
+    notifyListeners();
+    return accepted;
+  }
+
+  void pauseRoute(Quest q, {bool notify = true}) {
+    q.verification.routeTracking = false;
+    q.verification.routeAnchor = null;
+    q.verification.lastRouteReading = null;
+    if (notify) notifyListeners();
+  }
+
+  bool finishRoute(Quest q, LocationCheckIn reading, {required int attempt}) {
+    if (!q.isActive ||
+        q.attemptNumber != attempt ||
+        !q.verification.tracksRoute ||
+        !reading.isUsable ||
+        reading.accuracy > 25 ||
+        q.verification.startLocation == null ||
+        !reading.recordedAt.isAfter(q.verification.startLocation!.recordedAt) ||
+        (q.verification.lastRouteReading != null &&
+            reading.recordedAt.isBefore(
+              q.verification.lastRouteReading!.recordedAt,
+            ))) {
+      return false;
+    }
+    if (q.verification.routeTracking) recordRoute(q, reading, attempt: attempt);
+    q.verification.finishLocation = reading;
+    q.verification.routeFinished = true;
+    q.verification.locationError = null;
+    pauseRoute(q);
+    return true;
+  }
+
+  void setPhoto(Quest q, Uint8List? bytes) {
+    if (!q.isActive) return;
+    q.verification.photo = bytes;
+    notifyListeners();
+  }
+
+  void setReflection(Quest q, String text) {
+    if (!q.isActive) return;
+    q.verification.reflection = text;
+    notifyListeners();
+  }
+
+  void setStep(Quest q, int index, bool checked) {
+    if (!q.isActive || index < 0 || index >= q.verification.steps.length) {
+      return;
+    }
+    if (checked) {
+      q.verification.checkedSteps.add(index);
+    } else {
+      q.verification.checkedSteps.remove(index);
+    }
+    notifyListeners();
+  }
+
+  void confirmHonor(Quest q, bool confirmed) {
+    if (!q.isActive || q.verification.method == VerificationMethod.location) {
+      return;
+    }
+    q.verification.honorConfirmed = confirmed;
+    notifyListeners();
+  }
+
+  CompletionResult? complete(Quest q) {
+    // This guard makes XP awards idempotent, even if a button is tapped twice.
+    if (!q.isActive || q.isLocked || !q.verification.isSatisfied) {
+      return null;
+    }
+    final partyAttempt = _partyAttempt;
+    _partyAttempt = null;
+    final oldXP = totalXP;
+    final reward = q.rewardXP;
+    q.earnedXP += reward;
+    q.isCompleted = true;
+    q.completionCount++;
+    q.attemptClock.stop();
+    q.isActive = false;
+    q.isNew = false;
+    totalXP += reward;
+    completedThisSession++;
+    you.xp = 1075 + earnedXP;
+    you.questsCompleted++;
+    highlightedId = q.id;
+    final unlocked = <Quest>[];
+    for (final entry in questParents.entries) {
+      final child = quest(entry.key);
+      if (child.isLocked && entry.value.every((id) => quest(id).isCompleted)) {
+        child.isLocked = false;
+        child.isNew = true;
+        unlocked.add(child);
+      }
+    }
+    final discovered = <Connection>[];
+    for (final connection in connections) {
+      if (!connection.isDiscovered &&
+          connection.requiredQuestIds.every((id) => quest(id).isCompleted)) {
+        connection.isDiscovered = true;
+        discovered.add(connection);
+      }
+    }
+    final partyOwner =
+        partyAttempt != null &&
+            partyAttempt.questId == q.id &&
+            partyAttempt.attempt == q.attemptNumber &&
+            joinedGroupIds.contains(partyAttempt.groupId)
+        ? groups.firstWhere((g) => g.id == partyAttempt.groupId)
+        : null;
+    final contributionGroup = partyOwner ?? (hasGroup ? group : null);
+    // A category is less explored when it has fewer than three demo completions.
+    if (contributionGroup != null &&
+        contributionGroup.weeklyChallengeProgress <
+            contributionGroup.weeklyChallengeGoal &&
+        q.categories.any((c) => categoryCount(c) <= 3)) {
+      contributionGroup.weeklyChallengeProgress++;
+      groupContributions.putIfAbsent(contributionGroup.id, () => []).add(q.id);
+    }
+    completedActivities.insert(
+      0,
+      CompletedActivity(
+        questId: q.id,
+        title: q.title,
+        xp: reward,
+        attempt: q.attemptNumber,
+        completedAt: DateTime.now(),
+        verificationMethod: q.verification.recordedMethod,
+      ),
+    );
+    if (partyAttempt != null &&
+        partyAttempt.questId == q.id &&
+        partyAttempt.attempt == q.attemptNumber &&
+        joinedGroupIds.contains(partyAttempt.groupId)) {
+      final party = groups.firstWhere((g) => g.id == partyAttempt.groupId);
+      if (party.partyRound == partyAttempt.round) {
+        final task = party.partyTasks
+            .where((t) => t.questId == q.id && !t.isCompleted)
+            .firstOrNull;
+        if (task != null) {
+          task.completedById = you.id;
+          task.completedByName = you.name;
+          task.completedAt = DateTime.now();
+          task.earnedXP = reward;
+        }
+      }
+    }
+    recentActivity.insert(0, 'You completed ${q.title} · +$reward XP');
+    _saveHistory();
+    notifyListeners();
+    return CompletionResult(q, oldXP, totalXP, unlocked, discovered);
+  }
+
+  List<ActivityNode> get nodes => quests
+      .map(
+        (q) => ActivityNode(
+          questId: q.id,
+          parentQuestIds: questParents[q.id] ?? [],
+          childQuestIds: questParents.entries
+              .where((e) => e.value.contains(q.id))
+              .map((e) => e.key)
+              .toList(),
+          categories: q.categories,
+          state: q.isCompleted
+              ? NodeState.completed
+              : q.isLocked
+              ? NodeState.locked
+              : q.isNew
+              ? NodeState.newlyUnlocked
+              : NodeState.available,
+        ),
+      )
+      .toList();
+  List<bool> get achievements => [
+    connections.any((c) => c.isDiscovered),
+    categoryCount(Category.exploration) >= 5,
+    categoryCount(Category.creativity) >= 5,
+    completedCount >= 10,
+    rank == 1,
+    quests.where((q) => questParents.containsKey(q.id) && !q.isLocked).length >=
+        10,
+  ];
+}
