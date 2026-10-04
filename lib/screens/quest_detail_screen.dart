@@ -171,6 +171,10 @@ class QuestDetailScreen extends StatelessWidget {
                           );
                           if (!context.mounted) return;
                           if (next == null) {
+                            if (result.club != null) {
+                              Navigator.pop(context, false);
+                              return;
+                            }
                             if (onReturnHome != null) {
                               onReturnHome!();
                             } else {

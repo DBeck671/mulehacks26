@@ -15,19 +15,35 @@ import 'models/party_task.dart';
 import 'models/location_check_in.dart';
 import 'models/verification.dart';
 
+class ClubCompletion {
+  ClubCompletion({
+    required this.groupId,
+    required this.round,
+    required this.name,
+    required this.taskIds,
+    required this.completedIds,
+  });
+  final int groupId, round;
+  final String name;
+  final List<int> taskIds, completedIds;
+  bool get isComplete => completedIds.length == taskIds.length;
+}
+
 class CompletionResult {
   CompletionResult(
     this.quest,
     this.oldXP,
     this.newXP,
     this.unlocked,
-    this.connections,
-  );
+    this.connections, {
+    this.club,
+  });
   final Quest quest;
   final int oldXP, newXP;
   int get awardedXP => newXP - oldXP;
   final List<Quest> unlocked;
   final List<Connection> connections;
+  final ClubCompletion? club;
 }
 
 // One small ChangeNotifier owns the entire local demo. Screens only read it
@@ -667,6 +683,7 @@ class AppState extends ChangeNotifier {
         verificationMethod: q.verification.recordedMethod,
       ),
     );
+    ClubCompletion? clubCompletion;
     if (partyAttempt != null &&
         partyAttempt.questId == q.id &&
         partyAttempt.attempt == q.attemptNumber &&
@@ -681,13 +698,31 @@ class AppState extends ChangeNotifier {
           task.completedByName = you.name;
           task.completedAt = DateTime.now();
           task.earnedXP = reward;
+          clubCompletion = ClubCompletion(
+            groupId: party.id,
+            round: party.partyRound,
+            name: party.name,
+            taskIds: List.unmodifiable(party.partyTasks.map((t) => t.questId)),
+            completedIds: List.unmodifiable(
+              party.partyTasks
+                  .where((t) => t.isCompleted)
+                  .map((t) => t.questId),
+            ),
+          );
         }
       }
     }
     recentActivity.insert(0, 'You completed ${q.title} · +$reward XP');
     _saveHistory();
     notifyListeners();
-    return CompletionResult(q, oldXP, totalXP, unlocked, discovered);
+    return CompletionResult(
+      q,
+      oldXP,
+      totalXP,
+      unlocked,
+      discovered,
+      club: clubCompletion,
+    );
   }
 
   List<ActivityNode> get nodes => quests

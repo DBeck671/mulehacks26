@@ -54,9 +54,12 @@ class ClubActivityScreen extends StatelessWidget {
                   const SizedBox(height: 14),
                   ...[
                     ...state.recentActivity.take(3),
-                    'Alex completed Take a Detour · +150 XP',
-                    'Jordan discovered Nature + Creativity · Capture Nature',
-                    'Sam completed Morning Movement · +125 XP',
+                    if (state.demoData)
+                      'Alex completed Take a Detour · +150 XP',
+                    if (state.demoData)
+                      'Jordan discovered Nature + Creativity · Capture Nature',
+                    if (state.demoData)
+                      'Sam completed Morning Movement · +125 XP',
                   ].map(
                     (text) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
