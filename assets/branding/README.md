@@ -2,6 +2,7 @@
 
 Final files:
 
+- `sidequest-devpost-thumbnail-v2.png`: updated thumbnail with a continuous green route, category-colored milestones and reduced green backlighting. Latest Devpost version; the previous thumbnail remains available.
 - `sidequest-app-icon-1024.png`: opaque 1024×1024 app-icon export.
 - `sidequest-sq-icon-master.png`: original generated SQ artwork.
 - `sidequest-devpost-sq-thumbnail.png`: 1536×1024 project thumbnail, below 5 MB.
@@ -14,6 +15,10 @@ Devpost recommends a 3:2 project-gallery thumbnail in JPG, PNG or GIF, no larger
 than 5 MB: https://help.devpost.com/article/126-know-your-submission-steps
 
 Generated using the built-in imagegen tool. Final prompts:
+
+## Thumbnail v2 edit
+
+Built-in imagegen edit of `sidequest-devpost-sq-thumbnail.png`. Preserve SQ branding, phone layout, exact typography and UI. Connect the milestones with one continuous mint-green curved line. Recolor the three existing milestones to Learning blue #5DA9FF, Creativity purple #A879FF and Exploration orange #FF9F43, with restrained matching halos. Reduce green haze and backlighting behind and under the phone by approximately 75%, keeping a mostly charcoal backdrop and subtle mint rim light.
 
 ## SQ icon
 
