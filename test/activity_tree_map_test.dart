@@ -28,6 +28,15 @@ void main() {
       }
       expect(find.text('Highlight a quest'), findsOneWidget);
       expect(find.text('All sidequests'), findsOneWidget);
+      final combinedQuest = find.byKey(const ValueKey('tree-task-13'));
+      expect(
+        find.descendant(of: combinedQuest, matching: find.text('Nature')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: combinedQuest, matching: find.text('Creativity')),
+        findsOneWidget,
+      );
       final q = state.quest(1);
       state.start(q);
       verifyGPS(state, q);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import '../data/sample_quests.dart';
+import '../models/quest.dart';
 import '../widgets/common.dart';
 import 'quest_detail_screen.dart';
 
@@ -73,6 +74,26 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
                 'Lines connect prerequisites to the tasks they unlock. Complete every prerequisite. Tap any task for details.',
                 style: TextStyle(color: muted, fontSize: 12, height: 1.5),
               ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                children: Category.values
+                    .map(
+                      (c) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(c.icon, color: c.color, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            c.label,
+                            style: TextStyle(color: c.color, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    )
+                    .toList(),
+              ),
               const SizedBox(height: 24),
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -87,12 +108,12 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
                     for (var i = 0; i < row.length; i++) {
                       positions[row[i]] = Rect.fromLTWH(
                         12 + (i % columns) * (width + 12),
-                        y + (i ~/ columns) * 156,
+                        y + (i ~/ columns) * 180,
                         width,
-                        140,
+                        164,
                       );
                     }
-                    y += ((row.length / columns).ceil()) * 156 + 42;
+                    y += ((row.length / columns).ceil()) * 180 + 42;
                   }
                   return SizedBox(
                     height: y - 42,
@@ -100,7 +121,10 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
                       children: [
                         Positioned.fill(
                           child: CustomPaint(
-                            painter: _BranchPainter(positions, highlighted),
+                            painter: _BranchPainter(positions, highlighted, {
+                              for (final q in widget.state.quests)
+                                q.id: q.color,
+                            }),
                           ),
                         ),
                         ...positions.entries.map((entry) {
@@ -118,13 +142,19 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
                               label: '${q.title}, $status',
                               child: Material(
                                 key: ValueKey('tree-task-${q.id}'),
-                                color: surface,
+                                color: Color.alphaBlend(
+                                  q.color.withValues(alpha: .06),
+                                  surface,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   side: BorderSide(
-                                    color: highlighted.contains(q.id)
-                                        ? green
-                                        : raised,
+                                    color: q.color.withValues(
+                                      alpha: highlighted.contains(q.id)
+                                          ? .9
+                                          : .35,
+                                    ),
+                                    width: highlighted.contains(q.id) ? 2 : 1,
                                   ),
                                 ),
                                 clipBehavior: Clip.antiAlias,
@@ -167,7 +197,40 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 9),
+                                        const SizedBox(height: 8),
+                                        Wrap(
+                                          spacing: 4,
+                                          runSpacing: 4,
+                                          children: q.categories
+                                              .map(
+                                                (category) => Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 5,
+                                                        vertical: 3,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: category.color
+                                                        .withValues(alpha: .12),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          6,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    category.label,
+                                                    style: TextStyle(
+                                                      color: category.color,
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                        const SizedBox(height: 8),
                                         Expanded(
                                           child: Text(
                                             q.title,
@@ -221,9 +284,10 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen> {
 }
 
 class _BranchPainter extends CustomPainter {
-  _BranchPainter(this.positions, this.highlighted);
+  _BranchPainter(this.positions, this.highlighted, this.colors);
   final Map<int, Rect> positions;
   final Set<int> highlighted;
+  final Map<int, Color> colors;
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -257,8 +321,8 @@ class _BranchPainter extends CustomPainter {
         }
         paint.color =
             (highlighted.contains(child) && highlighted.contains(parent))
-            ? green.withValues(alpha: .8)
-            : muted.withValues(alpha: .5);
+            ? (colors[child] ?? green).withValues(alpha: .85)
+            : (colors[child] ?? muted).withValues(alpha: .4);
         canvas.drawPath(path, paint);
         canvas.drawCircle(
           Offset(end.dx, end.dy - 4),

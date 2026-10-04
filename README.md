@@ -197,3 +197,8 @@ Activity tree now shows all 26 quests and every prerequisite connection in
 one vertically scrollable map. Highlighting a quest emphasizes its ancestors
 without hiding any other nodes or edges. Cards include prerequisite labels,
 update their unlock/completion status and open task details when tapped.
+
+Tree cards, category labels and branch lines use the shared category colours:
+Nature green, Creativity purple, Learning blue, Exploration orange, Wellness
+pink, and Food yellow. Multi-category quests show every category label; lock
+and completion status remain separate from the category colour.
