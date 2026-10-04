@@ -106,7 +106,7 @@ void main() {
   testWidgets(
     'locked details explain prerequisites and offer no start button',
     (tester) async {
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       await tester.pumpWidget(
         MaterialApp(

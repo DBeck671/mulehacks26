@@ -48,7 +48,7 @@ Position position(double latitude) => Position(
 
 void main() {
   test('location evidence requires a usable start, later finish, and real displacement', () {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final q = state.quest(6);
     state.start(q);
@@ -75,7 +75,7 @@ void main() {
     expect(state.saveLocation(q, point(0, 5), start: true), isFalse);
   });
   test('reset clears evidence and location service handles denial without reading coordinates', () async {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final q = state.quest(6);
     state.start(q);
@@ -96,7 +96,7 @@ void main() {
     expect(fake.reads, 0);
   });
   test('repeating location quest rejects evidence from previous attempt', () {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final q = state.quest(6);
     state.start(q);
@@ -126,7 +126,7 @@ void main() {
     final fake = FakeLocations()..enabled = false;
     GeolocatorPlatform.instance = fake;
     addTearDown(() => GeolocatorPlatform.instance = previous);
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final q = state.quest(6);
     state.start(q);
@@ -158,7 +158,7 @@ void main() {
     final fake = FakeLocations();
     GeolocatorPlatform.instance = fake;
     addTearDown(() => GeolocatorPlatform.instance = previous);
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final q = state.quest(6);
     state.start(q);

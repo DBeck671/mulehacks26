@@ -35,9 +35,20 @@ class CompletionResult {
 enum JoinGroupResult { joined, alreadyActive, invalidCode, unknownCode }
 
 class AppState extends ChangeNotifier {
-  AppState({Random? recommendationRandom, this.activityStore})
-    : _recommendationRandom = recommendationRandom ?? Random() {
+  AppState({
+    Random? recommendationRandom,
+    this.activityStore,
+    this.demoData = false,
+  }) : _recommendationRandom = recommendationRandom ?? Random() {
     player = initialGroup.members.firstWhere((f) => f.id == 0);
+    if (!demoData) {
+      player.xp = 0;
+      player.questsCompleted = 0;
+      joinedGroupIds.clear();
+      activeGroupId = null;
+      return;
+    }
+    totalXP = 3780;
     groups.add(initialGroup);
     _generatePartyTasks(initialGroup);
     groups.add(
@@ -50,6 +61,7 @@ class AppState extends ChangeNotifier {
       ),
     );
   }
+  final bool demoData;
   String profileName = '';
   String profileGender = 'Prefer not to say';
   bool get hasProfile => profileName.isNotEmpty;
@@ -70,8 +82,11 @@ class AppState extends ChangeNotifier {
   bool historySaveFailed = false;
   Future<void> get historySaved => _pendingSave;
 
-  static Future<AppState> load(ActivityStore store) async {
-    final state = AppState(activityStore: store);
+  static Future<AppState> load(
+    ActivityStore store, {
+    bool demoData = false,
+  }) async {
+    final state = AppState(activityStore: store, demoData: demoData);
     try {
       final stored = await store.read();
       if (stored == null) return state;
@@ -111,7 +126,7 @@ class AppState extends ChangeNotifier {
         0,
         (sum, e) => sum + e.xp,
       );
-      state.you.xp = 1075 + state.earnedXP;
+      state.you.xp = (state.demoData ? 1075 : 0) + state.earnedXP;
       state.you.questsCompleted += state.completedActivities.length;
       for (final entry in questParents.entries) {
         if (entry.value.every((id) => state.quest(id).isCompleted)) {
@@ -257,7 +272,7 @@ class AppState extends ChangeNotifier {
   final quests = sampleQuests();
   final connections = sampleConnections();
   final Set<Category> interests = {};
-  int totalXP = 3780;
+  int totalXP = 0;
   int featuredId = 26;
   int? highlightedId;
   int completedThisSession = 0;
@@ -377,11 +392,11 @@ class AppState extends ChangeNotifier {
   );
   int get level => totalXP ~/ 1000 + 1;
   int get levelXP => totalXP % 1000;
-  int get earnedXP => totalXP - 3780;
+  int get earnedXP => totalXP - (demoData ? 3780 : 0);
   // Historical demo totals are separate from playable quest prerequisites.
-  int get completedCount => 12 + completedThisSession;
+  int get completedCount => (demoData ? 12 : 0) + completedThisSession;
   int get connectionCount =>
-      6 + connections.where((c) => c.isDiscovered).length;
+      (demoData ? 6 : 0) + connections.where((c) => c.isDiscovered).length;
   Friend get you => player;
   List<Friend> get leaderboard => hasGroup
       ? ([...group.members]..sort((a, b) => b.xp.compareTo(a.xp)))
@@ -605,7 +620,7 @@ class AppState extends ChangeNotifier {
     q.isNew = false;
     totalXP += reward;
     completedThisSession++;
-    you.xp = 1075 + earnedXP;
+    you.xp = (demoData ? 1075 : 0) + earnedXP;
     you.questsCompleted++;
     highlightedId = q.id;
     final unlocked = <Quest>[];

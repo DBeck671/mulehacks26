@@ -12,7 +12,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       await tester.pumpWidget(MaterialApp(home: MainScreen(state: state)));
       expect(

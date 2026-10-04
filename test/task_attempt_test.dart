@@ -6,7 +6,7 @@ import 'package:sidequest/widgets/quest_timer.dart';
 
 void main() {
   test('stop discards attempt without XP or log and permits a fresh start', () {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final q = state.quest(2);
     final xp = state.totalXP;
@@ -41,7 +41,7 @@ void main() {
   testWidgets('timer pauses, resumes and stop exits without logging', (
     tester,
   ) async {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final q = state.quest(2);
     state.start(q);

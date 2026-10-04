@@ -44,7 +44,7 @@ Position streamPosition(double latitude, DateTime time) => Position(
 
 void main() {
   test('walks around a loop count route length despite zero displacement', () {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final q = state.quest(1);
     state.start(q);
@@ -61,7 +61,7 @@ void main() {
   });
 
   test('stationary jitter, jumps, weak GPS, mocked readings and gaps do not award distance', () {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final q = state.quest(1);
     state.start(q);
@@ -91,7 +91,7 @@ void main() {
   test(
     'a short-distance failure can retry and retain verified movement only',
     () {
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final q = state.quest(1);
       state.start(q);
@@ -128,7 +128,7 @@ void main() {
         GeolocatorPlatform.instance = old;
         fake.controller.close();
       });
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final q = state.quest(1);
       state.start(q);

@@ -76,7 +76,7 @@ class ProgressScreen extends StatelessWidget {
         const Eyebrow('YOUR PATHS'),
         const SizedBox(height: 16),
         ...Category.values.map((c) {
-          final base = [4, 3, 3, 2, 2, 1][c.index];
+          final base = state.demoData ? [4, 3, 3, 2, 2, 1][c.index] : 1;
           final count = state.categoryCount(c);
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -107,7 +107,9 @@ class ProgressScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         SmoothBar(
-                          value: ((base + count) % 5 + 1) / 6,
+                          value: state.demoData
+                              ? ((base + count) % 5 + 1) / 6
+                              : (count % 3) / 3,
                           color: c.color,
                         ),
                       ],

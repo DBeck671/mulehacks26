@@ -9,7 +9,7 @@ import 'package:sidequest/models/quest.dart';
 
 void main() {
   late AppState state;
-  setUp(() => state = AppState());
+  setUp(() => state = AppState(demoData: true));
   tearDown(() => state.dispose());
   CompletionResult finish(int id) {
     expect(state.start(state.quest(id)), isTrue);

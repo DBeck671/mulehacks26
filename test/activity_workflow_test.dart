@@ -16,7 +16,7 @@ void main() {
   test(
     'each repeat creates a snapshot and three available follow-up choices',
     () {
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final q = state.quest(4);
       for (var i = 0; i < 2; i++) {
@@ -44,7 +44,7 @@ void main() {
   );
 
   test('recommendations vary tasks and positions without consecutive duplicate sets', () {
-    final state = AppState(recommendationRandom: Random(42));
+    final state = AppState(demoData: true, recommendationRandom: Random(42));
     addTearDown(state.dispose);
     final task = state.quest(4);
     state.start(task);
@@ -68,7 +68,7 @@ void main() {
   testWidgets(
     'XP counts up before suggestions appear and shows the actual repeat reward',
     (tester) async {
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final task = state.quest(4);
       state.start(task);
@@ -121,7 +121,7 @@ void main() {
   testWidgets('empty log contains no artificial completed tasks', (
     tester,
   ) async {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     await tester.pumpWidget(
       MaterialApp(
@@ -145,7 +145,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       await tester.pumpWidget(
         MaterialApp(

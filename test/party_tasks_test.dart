@@ -18,7 +18,7 @@ void verify(AppState state, Quest q) {
 
 void main() {
   test('party gets three unique tasks, verifies them once, and generates a fresh round', () {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     final group = state.group;
     final ids = group.partyTasks.map((t) => t.questId).toList();
@@ -52,7 +52,7 @@ void main() {
   test(
     'switching groups credits the original party, leaving cancels credit',
     () {
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final original = state.group;
       final id = original.partyTasks.first.questId;
@@ -81,7 +81,7 @@ void main() {
   test(
     'party task needs fresh evidence and solo completions do not fill it',
     () {
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final task = state.group.partyTasks.first;
       final q = state.quest(task.questId);
@@ -107,7 +107,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       Quest? selected;
       await tester.pumpWidget(

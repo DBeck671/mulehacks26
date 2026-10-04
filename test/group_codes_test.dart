@@ -8,7 +8,7 @@ import 'package:sidequest/screens/friends_screen.dart';
 
 void main() {
   test('invite and group codes normalize, reject unknown codes, and preserve player XP', () {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     expect(state.joinGroup(''), JoinGroupResult.invalidCode);
     expect(state.joinGroup('SQ-9999'), JoinGroupResult.unknownCode);
@@ -38,7 +38,7 @@ void main() {
     expect(state.joinedGroups.length, 2);
   });
   test('leaving and rejoining preserves player and independent membership', () {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     state.joinGroup('INV-7319');
     state.leaveGroup();
@@ -65,7 +65,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       await tester.pumpWidget(
         MaterialApp(

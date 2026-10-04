@@ -20,7 +20,7 @@ void main() {
   testWidgets(
     'repeat button starts fresh reflection with completion disabled',
     (tester) async {
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final q = state.quest(4);
       state.start(q);
@@ -74,7 +74,7 @@ void main() {
       final picker = FakePicker();
       ImagePickerPlatform.instance = picker;
       addTearDown(() => ImagePickerPlatform.instance = original);
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final q = state.quest(2);
       state.start(q);
@@ -132,7 +132,7 @@ void main() {
   testWidgets(
     'reflection and checklist controls enable completion only when ready',
     (tester) async {
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final learning = state.quest(4);
       state.start(learning);

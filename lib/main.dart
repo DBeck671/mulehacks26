@@ -51,7 +51,7 @@ class SideQuestApp extends StatefulWidget {
 }
 
 class _SideQuestAppState extends State<SideQuestApp> {
-  late final state = widget.initialState ?? AppState();
+  late final state = widget.initialState ?? AppState(demoData: widget.demoMode);
   late final AuthService auth =
       widget.auth ??
       FirebaseAuthService(

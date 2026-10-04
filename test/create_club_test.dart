@@ -8,7 +8,7 @@ import 'package:sidequest/widgets/club_invite_sheet.dart';
 
 void main() {
   test('new clubs have unique codes, a host, independent boards and support rejoining', () {
-    final state = AppState();
+    final state = AppState(demoData: true);
     addTearDown(state.dispose);
     expect(() => state.createClub(' '), throwsFormatException);
     expect(() => state.createClub('x' * 41), throwsFormatException);
@@ -45,7 +45,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       state.leaveGroup();
       await tester.pumpWidget(
@@ -92,7 +92,7 @@ void main() {
   testWidgets(
     'invite sharing uses the correct club code and copy remains available',
     (tester) async {
-      final state = AppState();
+      final state = AppState(demoData: true);
       addTearDown(state.dispose);
       final club = state.createClub('Photo crew');
       ShareParams? shared;
