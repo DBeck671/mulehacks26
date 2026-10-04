@@ -3,8 +3,135 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sidequest/app_state.dart';
 import 'package:sidequest/screens/main_screen.dart';
 import 'package:sidequest/screens/quest_detail_screen.dart';
+import 'package:sidequest/screens/friends_screen.dart';
+import 'package:sidequest/screens/club_activity_screen.dart';
 
 void main() {
+  testWidgets(
+    'clubs stack below create/join controls and leave belongs to its card',
+    (tester) async {
+      final state = AppState(demoData: true);
+      addTearDown(state.dispose);
+      state.joinGroup('INV-7319');
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListenableBuilder(
+              listenable: state,
+              builder: (_, _) => FriendsScreen(state: state),
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(ChoiceChip), findsNothing);
+      final firstCard = find.byKey(const ValueKey('club-card-1'));
+      final secondCard = find.byKey(const ValueKey('club-card-2'));
+      expect(firstCard, findsOneWidget);
+      expect(secondCard, findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('START A CLUB')).dy,
+        lessThan(tester.getTopLeft(firstCard).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('JOIN A GROUP')).dy,
+        lessThan(tester.getTopLeft(firstCard).dy),
+      );
+      final leaveFirst = find.descendant(
+        of: firstCard,
+        matching: find.text('LEAVE GROUP'),
+      );
+      await tester.ensureVisible(leaveFirst);
+      await tester.tap(leaveFirst);
+      await tester.pumpAndSettle();
+      expect(
+        state.activeGroupId,
+        2,
+      ); // Leaving another card keeps the selected club.
+      expect(state.joinedGroupIds, {2});
+      expect(firstCard, findsNothing);
+      expect(secondCard, findsOneWidget);
+    },
+  );
+  testWidgets('club card opens team details and members live inside the club', (
+    tester,
+  ) async {
+    final state = AppState(demoData: true, showcaseMode: true);
+    state.audio.enabled = false;
+    addTearDown(state.dispose);
+    state.simulateFriendCompletion();
+    final entry = state.clubRecentActivity.single;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: FriendsScreen(state: state)),
+      ),
+    );
+    expect(find.text('Members'), findsNothing);
+    await tester.tap(find.text('Weekend Warriors'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ClubActivityScreen), findsOneWidget);
+    expect(find.text('1 / 3 party tasks completed'), findsOneWidget);
+    await tester.tap(find.text('Members'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alex · bot'), findsOneWidget);
+    expect(find.text('Jordan · bot'), findsOneWidget);
+    await tester.tap(find.text('Activity'));
+    await tester.pumpAndSettle();
+    expect(find.text(entry), findsOneWidget);
+    expect(find.text('RECENT ACTIVITY'), findsOneWidget);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.text('Members'), findsNothing);
+  });
+  testWidgets(
+    'bottom Next and swipe keep started quests paused and resumable',
+    (tester) async {
+      final state = AppState();
+      addTearDown(state.dispose);
+      final first = state.quest(4);
+      state.start(first);
+      state.setReflection(first, 'A useful lesson worth remembering today.');
+      final attempt = first.attemptNumber;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: QuestDetailScreen(state: state, quest: first),
+        ),
+      );
+      final bottom = find.descendant(
+        of: find.byType(Scaffold).first,
+        matching: find.text('Next quest'),
+      );
+      expect(tester.getTopLeft(bottom).dy, greaterThan(500));
+      await tester.tap(bottom);
+      await tester.pumpAndSettle();
+      expect(first.isActive, isTrue);
+      expect(first.attemptClock.isRunning, isFalse);
+      expect(first.verification.isSatisfied, isTrue);
+      expect(first.attemptNumber, attempt);
+      final second = tester
+          .widget<QuestDetailScreen>(find.byType(QuestDetailScreen))
+          .quest;
+      state.start(second);
+      await tester.pump();
+      await tester.fling(
+        find.text(second.description),
+        const Offset(-300, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        state.activeQuests.map((q) => q.id),
+        containsAll([first.id, second.id]),
+      );
+      expect(second.attemptClock.isRunning, isFalse);
+      expect(state.completedActivities, isEmpty);
+      expect(state.totalXP, 0);
+      state.start(first);
+      expect(first.attemptClock.isRunning, isTrue);
+      expect(first.attemptNumber, attempt);
+      expect(first.verification.isSatisfied, isTrue);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   testWidgets(
     'next button and swipe browse without starting tasks or stacking routes',
     (tester) async {

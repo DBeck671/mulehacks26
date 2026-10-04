@@ -81,8 +81,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('YOUR CLUB · HOST'), findsOneWidget);
       expect(find.text('0 / 3 party tasks completed'), findsNothing);
-      await tester.ensureVisible(find.text('Club Activity'));
-      await tester.tap(find.text('Club Activity'));
+      await tester.ensureVisible(find.text('Trail crew'));
+      await tester.tap(find.text('Trail crew'));
       await tester.pumpAndSettle();
       expect(find.text('0 / 3 party tasks completed'), findsOneWidget);
       expect(tester.takeException(), isNull);

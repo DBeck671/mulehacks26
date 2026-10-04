@@ -83,8 +83,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1000));
       expect(find.text('1175 XP'), findsNothing);
       expect(find.text('8 / 10'), findsOneWidget);
-      await tester.ensureVisible(find.text('Club Activity'));
-      await tester.tap(find.text('Club Activity'));
+      await tester.ensureVisible(find.text('Weekend Warriors'));
+      await tester.tap(find.text('Weekend Warriors'));
       await tester.pumpAndSettle();
       expect(find.text('WEEKLY GROUP SIDEQUEST'), findsNothing);
       await tester.tap(find.byTooltip('Back'));

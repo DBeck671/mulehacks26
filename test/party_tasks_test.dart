@@ -125,8 +125,8 @@ void main() {
       );
       expect(find.text('0 / 3 party tasks completed'), findsNothing);
       expect(find.text('RECENT ACTIVITY'), findsNothing);
-      await tester.ensureVisible(find.text('Club Activity'));
-      await tester.tap(find.text('Club Activity'));
+      await tester.ensureVisible(find.text(state.group.name));
+      await tester.tap(find.text(state.group.name));
       await tester.pumpAndSettle();
       expect(find.text('0 / 3 party tasks completed'), findsOneWidget);
       await tester.ensureVisible(find.text('DO PARTY TASK →').first);

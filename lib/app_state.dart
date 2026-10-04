@@ -117,9 +117,8 @@ class AppState extends ChangeNotifier {
   Timer? _botTimer;
   bool demoBotsRunning = false;
   final Map<int, List<String>> _demoClubActivity = {};
-  List<String> get clubRecentActivity => showcaseMode && hasGroup
-      ? (_demoClubActivity[group.id] ?? [])
-      : recentActivity;
+  List<String> get clubRecentActivity =>
+      hasGroup ? (_demoClubActivity[group.id] ?? []) : recentActivity;
 
   void _fillDemoFriends(Group club) {
     if (!showcaseMode) return;
@@ -388,13 +387,14 @@ class AppState extends ChangeNotifier {
     return JoinGroupResult.joined;
   }
 
-  bool leaveGroup() {
-    if (!hasGroup) return false;
-    final leaving = group;
+  bool leaveGroup({int? groupId}) {
+    final id = groupId ?? activeGroupId;
+    if (id == null || !joinedGroupIds.contains(id)) return false;
+    final leaving = groups.firstWhere((g) => g.id == id);
     _partyAttempts.removeWhere((_, attempt) => attempt.groupId == leaving.id);
     leaving.members.removeWhere((f) => f.id == 0);
     joinedGroupIds.remove(leaving.id);
-    activeGroupId = joinedGroupIds.firstOrNull;
+    if (activeGroupId == leaving.id) activeGroupId = joinedGroupIds.firstOrNull;
     notifyListeners();
     return true;
   }
@@ -619,6 +619,13 @@ class AppState extends ChangeNotifier {
     _partyAttempts.remove(q.id);
     notifyListeners();
     return true;
+  }
+
+  void pauseTask(Quest q) {
+    if (!q.isActive) return;
+    q.attemptClock.stop();
+    pauseRoute(q, notify: false);
+    notifyListeners();
   }
 
   bool saveLocation(
@@ -849,7 +856,7 @@ class AppState extends ChangeNotifier {
     }
     final personalEntry = 'You completed ${q.title} · +$reward XP';
     recentActivity.insert(0, personalEntry);
-    if (showcaseMode && contributionGroup != null) {
+    if (contributionGroup != null) {
       _demoClubActivity
           .putIfAbsent(contributionGroup.id, () => [])
           .insert(0, personalEntry);

@@ -102,23 +102,28 @@ void main() {
         find.text('Joined Curiosity Club! Your XP comes with you.'),
         findsOneWidget,
       );
-      expect(
-        find.widgetWithText(ChoiceChip, 'Weekend Warriors'),
-        findsOneWidget,
-      );
-      expect(find.widgetWithText(ChoiceChip, 'Curiosity Club'), findsOneWidget);
+      expect(find.byKey(const ValueKey('club-card-1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('club-card-2')), findsOneWidget);
       await tester.tap(find.text('DONE'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('INVITE FRIEND'));
-      await tester.tap(find.text('INVITE FRIEND'));
+      final invite = find.descendant(
+        of: find.byKey(const ValueKey('club-card-2')),
+        matching: find.text('INVITE FRIEND'),
+      );
+      await tester.ensureVisible(invite);
+      await tester.tap(invite);
       await tester.pumpAndSettle();
       expect(find.text('SQ-7319'), findsNothing);
       expect(find.text('GROUP CODE'), findsNothing);
       expect(find.text('INV-7319'), findsOneWidget);
       await tester.tap(find.text('GOT IT'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('LEAVE GROUP'));
-      await tester.tap(find.text('LEAVE GROUP'));
+      final leaveSecond = find.descendant(
+        of: find.byKey(const ValueKey('club-card-2')),
+        matching: find.text('LEAVE GROUP'),
+      );
+      await tester.ensureVisible(leaveSecond);
+      await tester.tap(leaveSecond);
       await tester.pumpAndSettle();
       expect(state.activeGroupId, 1);
       await tester.ensureVisible(find.text('LEAVE GROUP'));

@@ -20,7 +20,6 @@ class QuestDetailScreen extends StatelessWidget {
   final Quest quest;
   final VoidCallback? onReturnHome;
   void nextQuest(BuildContext context) {
-    if (quest.isActive) return;
     final next = state.nextQuest(quest);
     if (next == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -28,6 +27,7 @@ class QuestDetailScreen extends StatelessWidget {
       );
       return;
     }
+    state.pauseTask(quest);
     state.audio.play('tap');
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
     Navigator.pushReplacement<bool, bool>(
@@ -78,12 +78,6 @@ class QuestDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Eyebrow('YOUR SIDEQUEST'),
         actions: [
-          if (!quest.isActive)
-            TextButton.icon(
-              onPressed: () => nextQuest(context),
-              label: const Text('Next quest'),
-              icon: const Icon(Icons.chevron_right_rounded, size: 18),
-            ),
           if (quest.isActive)
             TextButton(
               onPressed: () => stopTask(context),
@@ -91,12 +85,21 @@ class QuestDetailScreen extends StatelessWidget {
             ),
         ],
       ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+          child: OutlinedButton.icon(
+            onPressed: () => nextQuest(context),
+            label: const Text('Next quest'),
+            icon: const Icon(Icons.chevron_right_rounded, size: 18),
+          ),
+        ),
+      ),
       body: GestureDetector(
-        onHorizontalDragEnd: quest.isActive
-            ? null
-            : (details) {
-                if ((details.primaryVelocity ?? 0) < -300) nextQuest(context);
-              },
+        onHorizontalDragEnd: (details) {
+          if ((details.primaryVelocity ?? 0) < -300) nextQuest(context);
+        },
         child: SafeArea(
           child: PageBody(
             children: [
@@ -250,7 +253,7 @@ class QuestDetailScreen extends StatelessWidget {
                 ],
                 if (!quest.isActive && state.active != null) ...[
                   Text(
-                    'Starting this quest will replace your active quest: ${state.active!.title}.',
+                    'Your other quest stays in Active: ${state.active!.title}.',
                     style: const TextStyle(
                       color: muted,
                       height: 1.5,

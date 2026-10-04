@@ -176,7 +176,19 @@ timer and GPS route without clearing evidence; opening an Active row resumes
 its timer. GPS still requires an explicit resume/start from the task. Active
 attempts and evidence are session-local; only completed history is persisted.
 
-Before starting a sidequest, tap **Next quest** in its header or swipe left
-to browse another available task. Skipping replaces the current task screen,
-does not start an attempt or award XP, and excludes locked/active tasks.
+Tap **Next quest** in the fixed bottom bar or swipe left to browse another
+available task, including after starting a quest. Started tasks are paused
+and retained in Active with their timer and evidence intact. Skipping replaces
+the current task screen, does not start the next task or
+award XP, and excludes locked/active tasks.
 Club tasks already started from the shared list keep their club-specific flow.
+
+Tap a club card on Friends to open its detail page. **Tasks**, **Members**,
+and **Activity** tabs keep the shared list, member roster and team completion
+log together. Members no longer expands on the Friends page. Team activity
+is scoped to the selected club and remains session-local.
+
+Friends shows all joined clubs as stacked cards. Start Club and Join Group
+appear below the weekly group quest, before the list. Each card has an invite
+action and its own Leave Group control; leaving an unselected club does not
+change the currently selected club.
