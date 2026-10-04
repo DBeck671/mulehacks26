@@ -89,6 +89,13 @@ class HomeLeaderboard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (state.badgeFor(f) case final badge?) ...[
+                    Tooltip(
+                      message: badge.title,
+                      child: Icon(badge.icon, color: badge.color, size: 15),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   TweenAnimationBuilder<double>(
                     tween: Tween(end: f.xp.toDouble()),
                     duration: const Duration(milliseconds: 500),

@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import '../models/quest.dart';
+import '../models/reward.dart';
 import '../widgets/common.dart';
 import 'activity_tree_screen.dart';
+import 'rewards_screen.dart';
 
 class ProgressScreen extends StatelessWidget {
-  const ProgressScreen({super.key, required this.state});
+  const ProgressScreen({super.key, required this.state, this.onReturnQuests});
   final AppState state;
+  final VoidCallback? onReturnQuests;
   @override
   Widget build(BuildContext context) {
     const titles = [
@@ -34,17 +37,46 @@ class ProgressScreen extends StatelessWidget {
       Icons.emoji_events_outlined,
       Icons.route_outlined,
     ];
-    final achievements = state.achievements;
+    final achievements = List.generate(
+      titles.length,
+      (i) => state.hasBadge(questBadges[i + 1].id),
+    );
     return PageBody(
       children: [
         const PageHeading('Your Journey', ''),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Material(
+            color: surface,
+            borderRadius: BorderRadius.circular(20),
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              leading: const Icon(Icons.toll_rounded, color: Color(0xFFFFD166)),
+              title: const Text('Rewards & badges'),
+              subtitle: Text(
+                '${state.tokenBalance} tokens',
+                style: const TextStyle(color: muted, fontSize: 12),
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded, color: muted),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => RewardsScreen(state: state)),
+              ),
+            ),
+          ),
+        ),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ActivityTreeScreen(state: state),
+                builder: (_) => ActivityTreeScreen(
+                  state: state,
+                  onReturnQuests: onReturnQuests,
+                ),
               ),
             ),
             icon: const Icon(Icons.account_tree_outlined, size: 20),

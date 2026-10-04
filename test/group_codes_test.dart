@@ -100,14 +100,13 @@ void main() {
       await tester.enterText(find.byType(TextField), 'INV-7319');
       await tester.tap(find.text('JOIN GROUP'));
       await tester.pumpAndSettle();
-      expect(
-        find.text('Joined Curiosity Club! Your XP comes with you.'),
-        findsOneWidget,
-      );
+      expect(find.text("You're in!"), findsOneWidget);
       expect(find.byKey(const ValueKey('club-card-1')), findsOneWidget);
       expect(find.byKey(const ValueKey('club-card-2')), findsOneWidget);
-      await tester.tap(find.text('DONE'));
+      expect(find.text('JOIN GROUP'), findsNothing);
+      await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
+      expect(find.text("You're in!"), findsNothing);
       final invite = find.descendant(
         of: find.byKey(const ValueKey('club-card-2')),
         matching: find.text('INVITE FRIEND'),

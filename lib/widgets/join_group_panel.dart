@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import 'common.dart';
+import 'club_welcome.dart';
 
 class JoinGroupPanel extends StatefulWidget {
-  const JoinGroupPanel({super.key, required this.state});
+  const JoinGroupPanel({super.key, required this.state, this.onJoined});
   final AppState state;
+  final VoidCallback? onJoined;
   @override
   State<JoinGroupPanel> createState() => _JoinGroupPanelState();
 }
@@ -37,6 +39,13 @@ class _JoinGroupPanelState extends State<JoinGroupPanel> {
       };
       if (result == JoinGroupResult.joined) code.clear();
     });
+    if (result == JoinGroupResult.joined) {
+      if (widget.onJoined != null) {
+        widget.onJoined!();
+      } else {
+        showClubWelcome(context, widget.state.group.name);
+      }
+    }
   }
 
   @override

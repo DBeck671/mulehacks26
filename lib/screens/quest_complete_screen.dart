@@ -159,6 +159,17 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
               const SizedBox(height: 20),
               Center(
                 child: Text(
+                  '+${result.awardedTokens} tokens',
+                  style: const TextStyle(
+                    color: Color(0xFFFFD166),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
                   '+$gainedXP XP',
                   key: const ValueKey('xp-gain'),
                   style: TextStyle(

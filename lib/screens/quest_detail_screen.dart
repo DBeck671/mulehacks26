@@ -15,10 +15,12 @@ class QuestDetailScreen extends StatelessWidget {
     required this.state,
     required this.quest,
     this.onReturnHome,
+    this.onStopTask,
   });
   final AppState state;
   final Quest quest;
   final VoidCallback? onReturnHome;
+  final VoidCallback? onStopTask;
   void nextQuest(BuildContext context) {
     final next = state.nextQuest(quest);
     if (next == null) {
@@ -39,6 +41,7 @@ class QuestDetailScreen extends StatelessWidget {
           state: state,
           quest: next,
           onReturnHome: onReturnHome,
+          onStopTask: onStopTask,
         ),
         transitionsBuilder: (_, animation, _, child) => FadeTransition(
           opacity: animation,
@@ -62,8 +65,8 @@ class QuestDetailScreen extends StatelessWidget {
 
   void stopTask(BuildContext context) {
     state.stop(quest);
-    if (onReturnHome != null) {
-      onReturnHome!();
+    if (onStopTask != null) {
+      onStopTask!();
     } else {
       Navigator.pop(context);
     }
@@ -183,8 +186,11 @@ class QuestDetailScreen extends StatelessWidget {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          ActivityTreeScreen(state: state, questId: quest.id),
+                      builder: (_) => ActivityTreeScreen(
+                        state: state,
+                        questId: quest.id,
+                        onReturnQuests: onStopTask,
+                      ),
                     ),
                   ),
                   icon: const Icon(Icons.account_tree_outlined, size: 18),
@@ -303,6 +309,7 @@ class QuestDetailScreen extends StatelessWidget {
                                     state: state,
                                     quest: next,
                                     onReturnHome: onReturnHome,
+                                    onStopTask: onStopTask,
                                   ),
                                 ),
                                 result: true,

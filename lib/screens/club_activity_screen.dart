@@ -6,6 +6,7 @@ import '../widgets/common.dart';
 import '../widgets/party_tasks_panel.dart';
 import 'quest_detail_screen.dart';
 import 'club_chat_screen.dart';
+import '../widgets/member_badge.dart';
 
 enum _ClubView { tasks, members, activity }
 
@@ -82,8 +83,20 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
               backgroundColor: raised,
               child: Text(f.avatarInitial),
             ),
-            title: Text(
-              state.showcaseMode && f.id != 0 ? '${f.name} · bot' : f.name,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  state.showcaseMode && f.id != 0 ? '${f.name} · bot' : f.name,
+                ),
+                if (state.badgeFor(f) case final badge?) ...[
+                  const SizedBox(height: 5),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: MemberBadge(badge: badge),
+                  ),
+                ],
+              ],
             ),
             subtitle: Text(
               '${f.xp} XP · ${f.questsCompleted} quests',

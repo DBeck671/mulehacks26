@@ -14,6 +14,7 @@ import 'progress_screen.dart';
 import '../auth/auth_gate.dart';
 import 'account_screen.dart';
 import 'settings_screen.dart';
+import 'rewards_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key, required this.state});
@@ -86,6 +87,12 @@ class _MainScreenState extends State<MainScreen>
                 title: const Text('Settings'),
                 onTap: () => openMenuPage(SettingsScreen(state: widget.state)),
               ),
+              ListTile(
+                leading: const Icon(Icons.toll_rounded),
+                title: const Text('Rewards & badges'),
+                subtitle: Text('${widget.state.tokenBalance} tokens'),
+                onTap: () => openMenuPage(RewardsScreen(state: widget.state)),
+              ),
               if (auth != null)
                 ListTile(
                   leading: const Icon(Icons.logout),
@@ -118,6 +125,11 @@ class _MainScreenState extends State<MainScreen>
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
+  void returnQuests() {
+    selectTab(1);
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
   void openQuest(Quest quest) async {
     final completed = await Navigator.push<bool>(
       context,
@@ -126,6 +138,7 @@ class _MainScreenState extends State<MainScreen>
           state: widget.state,
           quest: quest,
           onReturnHome: returnHome,
+          onStopTask: returnQuests,
         ),
       ),
     );
@@ -196,7 +209,10 @@ class _MainScreenState extends State<MainScreen>
                   openFriends: () => selectTab(4),
                 ),
                 QuestsScreen(state: widget.state, openQuest: openQuest),
-                ProgressScreen(state: widget.state),
+                ProgressScreen(
+                  state: widget.state,
+                  onReturnQuests: returnQuests,
+                ),
                 ActivityLogScreen(state: widget.state, openQuest: openQuest),
                 FriendsScreen(state: widget.state, openQuest: openQuest),
               ],

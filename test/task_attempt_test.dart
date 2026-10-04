@@ -9,6 +9,30 @@ import 'package:sidequest/screens/main_screen.dart';
 import 'package:sidequest/widgets/quest_row_card.dart';
 
 void main() {
+  testWidgets(
+    'stopping a task opened from Home returns to Quests without XP or history',
+    (tester) async {
+      final state = AppState();
+      addTearDown(state.dispose);
+      final q = state.quest(2);
+      state.featuredId = q.id;
+      state.start(q);
+      await tester.pumpWidget(MaterialApp(home: MainScreen(state: state)));
+      await tester.ensureVisible(find.text('CONTINUE SIDEQUEST'));
+      await tester.tap(find.text('CONTINUE SIDEQUEST'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Stop task'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        1,
+      );
+      expect(find.text('Explore'), findsOneWidget);
+      expect(q.isActive, isFalse);
+      expect(state.totalXP, 0);
+      expect(state.completedActivities, isEmpty);
+    },
+  );
   test(
     'starting another quest preserves running and manually paused timers',
     () {

@@ -16,7 +16,16 @@ void main() {
       final state = AppState();
       addTearDown(state.dispose);
       await tester.pumpWidget(
-        MaterialApp(home: ActivityTreeScreen(state: state, questId: 3)),
+        MaterialApp(
+          builder: (_, child) => MediaQuery(
+            data: const MediaQueryData(
+              size: Size(390, 844),
+              disableAnimations: true,
+            ),
+            child: child!,
+          ),
+          home: ActivityTreeScreen(state: state, questId: 3),
+        ),
       );
       expect(find.byKey(const ValueKey('tree-task-1')), findsOneWidget);
       expect(find.byKey(const ValueKey('tree-task-2')), findsOneWidget);
@@ -77,6 +86,9 @@ void main() {
       await tester.tap(find.byTooltip('Reset view'));
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('tree-task-3')));
+      await tester.pump();
+      expect(find.text('YOUR SIDEQUEST'), findsNothing);
+      await tester.tap(find.byTooltip('View quest'));
       await tester.pumpAndSettle();
       expect(find.text('YOUR SIDEQUEST'), findsOneWidget);
       expect(tester.takeException(), isNull);

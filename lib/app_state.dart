@@ -19,6 +19,7 @@ import 'models/club_message.dart';
 import 'models/party_task.dart';
 import 'models/location_check_in.dart';
 import 'models/verification.dart';
+import 'models/reward.dart';
 
 class ClubCompletion {
   ClubCompletion({
@@ -46,6 +47,7 @@ class CompletionResult {
   final Quest quest;
   final int oldXP, newXP;
   int get awardedXP => newXP - oldXP;
+  int get awardedTokens => max(1, awardedXP ~/ 25);
   final List<Quest> unlocked;
   final List<Connection> connections;
   final ClubCompletion? club;
@@ -320,6 +322,33 @@ class AppState extends ChangeNotifier {
           (e) => 'You completed ${e.title} · +${e.xp} XP',
         ),
       );
+      state.rewardClaims.addAll(
+        (data['rewardClaims'] as List? ?? []).map(
+          (entry) => RewardClaim.fromJson(entry as Map<String, dynamic>),
+        ),
+      );
+      if (state.rewardClaims.any(
+            (c) =>
+                c.cost <= 0 ||
+                rewardCatalog
+                    .where((r) => r.id == c.rewardId && r.cost == c.cost)
+                    .isEmpty,
+          ) ||
+          state.rewardClaims.map((c) => c.rewardId).toSet().length !=
+              state.rewardClaims.length ||
+          state.tokensSpent > state.tokensEarned) {
+        throw const FormatException('Invalid reward history');
+      }
+      state._earnedBadgeIds.addAll(
+        (data['earnedBadges'] as List? ?? []).whereType<String>().where(
+          (id) => questBadges.any((b) => b.id == id),
+        ),
+      );
+      state._unlockBadges();
+      final equipped = data['equippedBadge'] as String?;
+      if (state._earnedBadgeIds.contains(equipped)) {
+        state.equippedBadgeId = equipped;
+      }
       return state;
     } catch (_) {
       state.dispose();
@@ -338,6 +367,9 @@ class AppState extends ChangeNotifier {
       'showCompletedQuests': showCompletedQuests,
       'profileName': profileName,
       'profileGender': profileGender,
+      'rewardClaims': rewardClaims.map((c) => c.toJson()).toList(),
+      'earnedBadges': _earnedBadgeIds.toList(),
+      'equippedBadge': equippedBadgeId,
     });
     // Serialize writes so a slower earlier completion cannot replace a newer one.
     _pendingSave = _pendingSave.then((_) async {
@@ -353,6 +385,62 @@ class AppState extends ChangeNotifier {
 
   void retryHistorySave() => _saveHistory();
   bool showCompletedQuests = true;
+  int get tokensEarned =>
+      completedActivities.fold(0, (sum, e) => sum + max(1, e.xp ~/ 25));
+  int get tokensSpent => rewardClaims.fold(0, (sum, c) => sum + c.cost);
+  int get tokenBalance => tokensEarned - tokensSpent;
+  final List<RewardClaim> rewardClaims = [];
+  final Set<String> _earnedBadgeIds = {};
+  String? equippedBadgeId;
+  bool hasBadge(String id) => _earnedBadgeIds.contains(id);
+  bool equipBadge(String id) {
+    if (!hasBadge(id)) return false;
+    equippedBadgeId = id;
+    _saveHistory();
+    notifyListeners();
+    return true;
+  }
+
+  QuestBadge? badgeFor(Friend friend) {
+    final id = friend.id == you.id
+        ? equippedBadgeId
+        : showcaseMode && friend.questsCompleted > 0
+        ? friend.questsCompleted >= 10
+              ? 'adventurer'
+              : 'first'
+        : null;
+    return questBadges.where((b) => b.id == id).firstOrNull;
+  }
+
+  void _unlockBadges() {
+    if (completedActivities.isEmpty) return;
+    _earnedBadgeIds.add('first');
+    final eligible = achievements;
+    for (var i = 0; i < eligible.length; i++) {
+      if (eligible[i]) _earnedBadgeIds.add(questBadges[i + 1].id);
+    }
+    equippedBadgeId ??= 'first';
+  }
+
+  RewardClaim? claimReward(String rewardId) {
+    final offer = rewardCatalog.where((r) => r.id == rewardId).firstOrNull;
+    if (offer == null ||
+        tokenBalance < offer.cost ||
+        rewardClaims.any((c) => c.rewardId == rewardId)) {
+      return null;
+    }
+    final claim = RewardClaim(
+      rewardId: rewardId,
+      cost: offer.cost,
+      code: 'SQ-DEMO-${rewardId.toUpperCase()}',
+      claimedAt: DateTime.now(),
+    );
+    rewardClaims.insert(0, claim);
+    _saveHistory();
+    notifyListeners();
+    return claim;
+  }
+
   void setShowCompletedQuests(bool value) {
     showCompletedQuests = value;
     _saveHistory();
@@ -990,6 +1078,7 @@ class AppState extends ChangeNotifier {
           .putIfAbsent(contributionGroup.id, () => [])
           .insert(0, personalEntry);
     }
+    _unlockBadges();
     _saveHistory();
     notifyListeners();
     return CompletionResult(

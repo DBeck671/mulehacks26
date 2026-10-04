@@ -9,6 +9,7 @@ import '../widgets/start_club_panel.dart';
 import '../widgets/club_invite_sheet.dart';
 import '../models/quest.dart';
 import '../models/group.dart';
+import '../widgets/club_welcome.dart';
 
 class FriendsScreen extends StatelessWidget {
   const FriendsScreen({super.key, required this.state, this.openQuest});
@@ -31,7 +32,13 @@ class FriendsScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                JoinGroupPanel(state: state),
+                JoinGroupPanel(
+                  state: state,
+                  onJoined: () {
+                    Navigator.pop(sheetContext);
+                    showClubWelcome(context, state.group.name);
+                  },
+                ),
                 TextButton(
                   onPressed: () => Navigator.pop(sheetContext),
                   child: const Text('DONE'),
