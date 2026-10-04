@@ -7,6 +7,7 @@ import 'auth/auth_service.dart';
 import 'auth/firebase_config.dart';
 
 import 'app_state.dart';
+import 'services/firebase_photo_verifier.dart';
 import 'screens/onboarding.dart';
 import 'screens/main_screen.dart';
 import 'widgets/common.dart';
@@ -30,6 +31,7 @@ Future<void> main() async {
       );
     }
   }
+  await FirebasePhotoVerifier.initialize();
   runApp(SideQuestApp(auth: auth, persistHistory: true));
 }
 

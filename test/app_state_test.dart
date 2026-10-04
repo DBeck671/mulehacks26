@@ -1,3 +1,5 @@
+import 'evidence_helpers.dart';
+
 import 'dart:typed_data';
 
 import 'gps_helpers.dart';
@@ -17,7 +19,7 @@ void main() {
     if (q.verification.method == VerificationMethod.location) {
       verifyGPS(state, q);
     } else {
-      state.confirmHonor(q, true);
+      verifyNonLocation(state, q);
     }
     return state.complete(state.quest(id))!;
   }
@@ -44,6 +46,8 @@ void main() {
       expect(q.verification.honorConfirmed, isFalse);
       expect(state.complete(q), isNull);
       state.setPhoto(q, Uint8List.fromList([1]));
+      expect(state.complete(q), isNull);
+      q.verification.photoReviewStatus = PhotoReviewStatus.approved;
       final second = state.complete(q)!;
       expect(second.unlocked, isEmpty);
       expect(state.complete(q), isNull);
@@ -153,13 +157,18 @@ void main() {
     state.start(q);
     expect(state.complete(q), isNull);
     state.setPhoto(q, Uint8List.fromList([1]));
+    expect(q.verification.isSatisfied, isFalse);
+    q.verification.photoReviewStatus = PhotoReviewStatus.approved;
     expect(q.verification.isSatisfied, isTrue);
     state.setPhoto(q, null);
     expect(state.complete(q), isNull);
     state.confirmHonor(q, true);
+    expect(q.verification.honorConfirmed, isFalse);
+    expect(state.complete(q), isNull);
+    verifyNonLocation(state, q);
     expect(state.complete(q), isNotNull);
     expect(state.totalXP, 3830);
-    expect(q.verification.recordedMethod, 'Honor-based confirmation');
+    expect(q.verification.recordedMethod, 'Photo evidence');
   });
   test('reflection and checklist must meet their requirements', () {
     final learning = state.quest(4);

@@ -5,6 +5,7 @@ import '../models/quest.dart';
 import '../widgets/common.dart';
 import '../widgets/party_tasks_panel.dart';
 import 'quest_detail_screen.dart';
+import 'club_chat_screen.dart';
 
 enum _ClubView { tasks, members, activity }
 
@@ -131,7 +132,23 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: state,
     builder: (_, _) => Scaffold(
-      appBar: AppBar(title: const Text('Club Activity')),
+      appBar: AppBar(
+        title: const Text('Club Activity'),
+        actions: [
+          if (state.hasGroup)
+            IconButton(
+              tooltip: 'Group chat',
+              icon: const Icon(Icons.chat_bubble_outline_rounded),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      ClubChatScreen(state: state, club: state.group),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: !state.hasGroup
             ? const PageBody(

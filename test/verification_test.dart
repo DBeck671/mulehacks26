@@ -5,6 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:sidequest/app_state.dart';
+import 'package:sidequest/models/verification.dart';
+import 'package:sidequest/services/photo_verifier.dart';
+
+import 'dart:typed_data';
+
 import 'package:sidequest/screens/quest_detail_screen.dart';
 
 class FakePicker extends ImagePickerPlatform {
@@ -14,6 +19,20 @@ class FakePicker extends ImagePickerPlatform {
     required ImageSource source,
     ImagePickerOptions options = const ImagePickerOptions(),
   }) async => next;
+}
+
+class FakePhotoVerifier implements PhotoVerifier {
+  bool matches = false;
+  @override
+  Future<PhotoReview> review({
+    required String title,
+    required String description,
+    required String evidencePrompt,
+    required Uint8List image,
+  }) async => PhotoReview(
+    matches: matches,
+    reason: 'This image does not show the requested subject.',
+  );
 }
 
 void main() {
@@ -76,6 +95,8 @@ void main() {
       addTearDown(() => ImagePickerPlatform.instance = original);
       final state = AppState(demoData: true);
       addTearDown(state.dispose);
+      final verifier = FakePhotoVerifier();
+      state.photoVerifier = verifier;
       final q = state.quest(2);
       state.start(q);
       await tester.pumpWidget(
@@ -110,6 +131,14 @@ void main() {
       await pick('Choose photo');
       expect(q.verification.photo, isNotNull);
       expect(find.byType(Image), findsOneWidget);
+      expect(q.verification.isSatisfied, isFalse);
+      expect(find.text('Use honor-based confirmation'), findsNothing);
+      await tester.ensureVisible(find.text('Check photo'));
+      await tester.tap(find.text('Check photo'));
+      await tester.pumpAndSettle();
+      expect(q.verification.photoReviewStatus, PhotoReviewStatus.rejected);
+      expect(find.textContaining('Choose a new photo'), findsOneWidget);
+      final validImage = picker.next;
       final saved = q.verification.photo;
       picker.next = null;
       await pick('Replace photo');
@@ -121,6 +150,14 @@ void main() {
       await pick('Replace photo');
       expect(find.textContaining('Could not open that photo'), findsOneWidget);
       expect(q.verification.photo, same(saved));
+      picker.next = validImage;
+      await pick('Replace photo');
+      verifier.matches = true;
+      await tester.ensureVisible(find.text('Check photo'));
+      await tester.tap(find.text('Check photo'));
+      await tester.pumpAndSettle();
+      expect(q.verification.isSatisfied, isTrue);
+      expect(find.text('Photo matches this quest.'), findsOneWidget);
       await tester.ensureVisible(find.text('Remove'));
       await tester.tap(find.text('Remove'));
       await tester.pump();

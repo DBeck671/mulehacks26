@@ -1,3 +1,5 @@
+import 'evidence_helpers.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sidequest/app_state.dart';
 import 'package:sidequest/models/quest.dart';
@@ -31,7 +33,7 @@ void main() {
       first.buildPath({Category.nature, Category.creativity});
       final q = first.quest(2);
       first.start(q);
-      first.confirmHonor(q, true);
+      verifyNonLocation(first, q);
       first.complete(q);
       await first.historySaved;
       first.dispose();

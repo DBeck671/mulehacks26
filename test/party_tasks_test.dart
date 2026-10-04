@@ -1,3 +1,5 @@
+import 'evidence_helpers.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sidequest/app_state.dart';
@@ -12,7 +14,7 @@ void verify(AppState state, Quest q) {
   if (q.verification.method == VerificationMethod.location) {
     verifyGPS(state, q);
   } else {
-    state.confirmHonor(q, true);
+    verifyNonLocation(state, q);
   }
 }
 

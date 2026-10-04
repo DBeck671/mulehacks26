@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_state.dart';
+import 'services/firebase_photo_verifier.dart';
 import 'data/activity_store.dart';
 import 'main.dart';
 import 'models/quest.dart';
@@ -8,6 +9,7 @@ import 'models/quest.dart';
 /// Presentation entry point. Never uses a Firebase account's storage key.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await FirebasePhotoVerifier.initialize(allowLocalDebug: true);
   final state = await AppState.load(
     LocalActivityStore('showcase-demo-v1'),
     demoData: true,

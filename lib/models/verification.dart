@@ -5,6 +5,8 @@ import 'location_check_in.dart';
 
 import 'package:flutter/material.dart';
 
+enum PhotoReviewStatus { unchecked, checking, approved, rejected, error }
+
 enum VerificationMethod { photo, reflection, checklist, location }
 
 extension VerificationStyle on VerificationMethod {
@@ -59,6 +61,9 @@ class Verification {
   void reset() {
     demoVerified = false;
     photo = null;
+    photoReviewStatus = PhotoReviewStatus.unchecked;
+    photoReviewMessage = null;
+    photoRevision++;
     reflection = '';
     checkedSteps.clear();
     honorConfirmed = false;
@@ -136,13 +141,19 @@ class Verification {
   final String prompt;
   final List<String> steps;
   Uint8List? photo;
+  PhotoReviewStatus photoReviewStatus = PhotoReviewStatus.unchecked;
+  String? photoReviewMessage;
+  int photoRevision = 0;
   String reflection = '';
   final Set<int> checkedSteps = {};
   bool honorConfirmed = false;
   bool demoVerified = false;
   bool get hasEvidence => switch (method) {
     VerificationMethod.location => locationVerified,
-    VerificationMethod.photo => photo != null && photo!.isNotEmpty,
+    VerificationMethod.photo =>
+      photo != null &&
+          photo!.isNotEmpty &&
+          photoReviewStatus == PhotoReviewStatus.approved,
     VerificationMethod.reflection => reflection.trim().length >= 20,
     VerificationMethod.checklist =>
       steps.isNotEmpty &&
@@ -152,6 +163,8 @@ class Verification {
       demoVerified ||
       (method == VerificationMethod.location
           ? locationVerified
+          : method == VerificationMethod.photo
+          ? hasEvidence
           : honorConfirmed || hasEvidence);
   String get recordedMethod => demoVerified
       ? 'Demo simulation'

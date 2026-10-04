@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart' hide Category;
 
 import 'data/sample_quests.dart';
 import 'services/quest_audio.dart';
+import 'services/photo_verifier.dart';
+import 'services/firebase_photo_verifier.dart';
 import 'data/activity_store.dart';
 import 'models/quest.dart';
 import 'models/completed_activity.dart';
@@ -13,6 +15,7 @@ import 'models/connection.dart';
 import 'models/activity_node.dart';
 import 'models/friend.dart';
 import 'models/group.dart';
+import 'models/club_message.dart';
 import 'models/party_task.dart';
 import 'models/location_check_in.dart';
 import 'models/verification.dart';
@@ -56,6 +59,7 @@ class AppState extends ChangeNotifier {
   AppState({
     Random? recommendationRandom,
     this.activityStore,
+    this.photoVerifier = const FirebasePhotoVerifier(),
     this.demoData = false,
     this.showcaseMode = false,
   }) : _recommendationRandom = recommendationRandom ?? Random() {
@@ -96,6 +100,7 @@ class AppState extends ChangeNotifier {
       ),
     );
   }
+  PhotoVerifier photoVerifier;
   final bool demoData;
   final bool showcaseMode;
   final QuestAudio audio = QuestAudio();
@@ -110,6 +115,54 @@ class AppState extends ChangeNotifier {
     if (!showcaseMode || !q.isActive || q.isLocked) return false;
     q.verification.demoVerified = true;
     notifyListeners();
+    return true;
+  }
+
+  final Map<int, List<ClubMessage>> _clubMessages = {};
+  final Set<Timer> _chatTimers = {};
+  List<ClubMessage> clubMessages(int groupId) =>
+      List.unmodifiable(_clubMessages[groupId] ?? const <ClubMessage>[]);
+
+  bool sendClubMessage(int groupId, String text) {
+    final content = text.trim();
+    if (_disposed ||
+        !joinedGroupIds.contains(groupId) ||
+        content.isEmpty ||
+        content.length > 500) {
+      return false;
+    }
+    final club = groups.firstWhere((g) => g.id == groupId);
+    final messages = _clubMessages.putIfAbsent(groupId, () => []);
+    messages.add(
+      ClubMessage(
+        sender: you.name,
+        text: content,
+        sentAt: DateTime.now(),
+        isYou: true,
+      ),
+    );
+    notifyListeners();
+    if (showcaseMode && club.members.any((m) => m.id != 0)) {
+      final friend = club.members.firstWhere((m) => m.id != 0);
+      late Timer timer;
+      timer = Timer(const Duration(seconds: 2), () {
+        _chatTimers.remove(timer);
+        if (_disposed || !joinedGroupIds.contains(groupId)) return;
+        final remaining = club.partyTasks.where((t) => !t.isCompleted).toList();
+        messages.add(
+          ClubMessage(
+            sender: friend.name,
+            isBot: true,
+            sentAt: DateTime.now(),
+            text: remaining.isEmpty
+                ? 'We finished this round! Ready for another?'
+                : 'Let’s work on ${quest(remaining.first.questId).title} next. We have ${remaining.length} shared tasks left.',
+          ),
+        );
+        notifyListeners();
+      });
+      _chatTimers.add(timer);
+    }
     return true;
   }
 
@@ -312,6 +365,10 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _botTimer?.cancel();
+    for (final timer in _chatTimers) {
+      timer.cancel();
+    }
+    _chatTimers.clear();
     audio.dispose();
     for (final q in quests) {
       q.attemptClock.stop();
@@ -732,7 +789,63 @@ class AppState extends ChangeNotifier {
   void setPhoto(Quest q, Uint8List? bytes) {
     if (!q.isActive) return;
     q.verification.photo = bytes;
+    q.verification.photoRevision++;
+    q.verification.photoReviewStatus = PhotoReviewStatus.unchecked;
+    q.verification.photoReviewMessage = null;
+    q.verification.demoVerified = false;
+    q.verification.honorConfirmed = false;
     notifyListeners();
+  }
+
+  Future<void> reviewPhoto(Quest q) async {
+    final v = q.verification;
+    if (_disposed ||
+        !q.isActive ||
+        v.method != VerificationMethod.photo ||
+        v.photo == null ||
+        v.photoReviewStatus == PhotoReviewStatus.checking) {
+      return;
+    }
+    final attempt = q.attemptNumber, revision = v.photoRevision;
+    v.photoReviewStatus = PhotoReviewStatus.checking;
+    v.photoReviewMessage = null;
+    v.demoVerified = false;
+    notifyListeners();
+    bool current() =>
+        !_disposed &&
+        q.isActive &&
+        q.attemptNumber == attempt &&
+        v.photoRevision == revision;
+    try {
+      final review = await photoVerifier
+          .review(
+            title: q.title,
+            description: q.description,
+            evidencePrompt: v.prompt,
+            image: v.photo!,
+          )
+          .timeout(const Duration(seconds: 30));
+      if (!current()) return;
+      v.photoReviewStatus = review.matches
+          ? PhotoReviewStatus.approved
+          : PhotoReviewStatus.rejected;
+      v.photoReviewMessage = review.matches
+          ? 'Photo matches this quest.'
+          : '${review.reason} Choose a new photo and try again.';
+    } on PhotoReviewException catch (e) {
+      if (!current()) return;
+      v.photoReviewStatus = PhotoReviewStatus.error;
+      v.photoReviewMessage = e.message;
+    } on TimeoutException {
+      if (!current()) return;
+      v.photoReviewStatus = PhotoReviewStatus.error;
+      v.photoReviewMessage = 'Photo check timed out. Try again when connected.';
+    } catch (_) {
+      if (!current()) return;
+      v.photoReviewStatus = PhotoReviewStatus.error;
+      v.photoReviewMessage = 'Could not check this photo. Please try again.';
+    }
+    if (current()) notifyListeners();
   }
 
   void setReflection(Quest q, String text) {
@@ -754,7 +867,9 @@ class AppState extends ChangeNotifier {
   }
 
   void confirmHonor(Quest q, bool confirmed) {
-    if (!q.isActive || q.verification.method == VerificationMethod.location) {
+    if (!q.isActive ||
+        q.verification.method == VerificationMethod.location ||
+        q.verification.method == VerificationMethod.photo) {
       return;
     }
     q.verification.honorConfirmed = confirmed;

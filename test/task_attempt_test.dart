@@ -1,3 +1,5 @@
+import 'evidence_helpers.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sidequest/app_state.dart';
@@ -12,7 +14,7 @@ void main() {
     final xp = state.totalXP;
     state.start(q);
     final attempt = q.attemptNumber;
-    state.confirmHonor(q, true);
+    verifyNonLocation(state, q);
     expect(q.attemptClock.isRunning, isTrue);
     expect(state.stop(q), isTrue);
     expect(q.isActive, isFalse);
@@ -27,7 +29,7 @@ void main() {
     expect(state.complete(q), isNull);
     state.start(q);
     expect(q.attemptClock.isRunning, isTrue);
-    state.confirmHonor(q, true);
+    verifyNonLocation(state, q);
     expect(state.complete(q), isNotNull);
     final earned = state.totalXP;
     state.start(q);

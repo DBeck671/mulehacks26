@@ -54,88 +54,61 @@ class _MainScreenState extends State<MainScreen>
     Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
 
-  Widget buildDrawer(BuildContext context) {
+  void openAccountMenu() {
     final auth = AccountScope.of(context);
-    return Drawer(
-      backgroundColor: surface,
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.route_rounded, color: green, size: 34),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'SideQuest',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    auth?.account?.email ?? 'Local preview',
-                    style: const TextStyle(color: muted, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: const Text('Account'),
-              onTap: () =>
-                  openMenuPage(AccountScreen(auth: auth, state: widget.state)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.history_rounded),
-              title: const Text('Activity Log'),
-              onTap: () => openMenuPage(
-                Scaffold(
-                  appBar: AppBar(title: const Text('Activity Log')),
-                  body: ListenableBuilder(
-                    listenable: widget.state,
-                    builder: (_, _) => ActivityLogScreen(
-                      state: widget.state,
-                      openQuest: openQuest,
-                    ),
-                  ),
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(
+                  widget.state.profileName.isEmpty
+                      ? 'Your account'
+                      : widget.state.profileName,
+                ),
+                subtitle: Text(
+                  auth?.account?.email ?? 'Local preview',
+                  style: const TextStyle(color: muted),
                 ),
               ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings_outlined),
-              title: const Text('Settings'),
-              onTap: () => openMenuPage(SettingsScreen(state: widget.state)),
-            ),
-            const Spacer(),
-            const Divider(color: raised),
-            ListTile(
-              leading: Icon(auth == null ? Icons.home_outlined : Icons.logout),
-              title: Text(auth == null ? 'Back to home' : 'Log out'),
-              onTap: () async {
-                Navigator.pop(context);
-                await widget.state.historySaved;
-                if (auth != null) {
-                  try {
-                    await auth.signOut();
-                  } catch (_) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Could not log out. Please retry.'),
-                        ),
-                      );
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: const Text('Account'),
+                onTap: () => openMenuPage(
+                  AccountScreen(auth: auth, state: widget.state),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('Settings'),
+                onTap: () => openMenuPage(SettingsScreen(state: widget.state)),
+              ),
+              if (auth != null)
+                ListTile(
+                  leading: const Icon(Icons.logout),
+                  title: const Text('Log out'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await widget.state.historySaved;
+                    try {
+                      await auth.signOut();
+                    } catch (_) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not log out. Please retry.'),
+                          ),
+                        );
+                      }
                     }
-                  }
-                } else if (context.mounted) {
-                  selectTab(0);
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -166,7 +139,13 @@ class _MainScreenState extends State<MainScreen>
     builder: (_, _) => Scaffold(
       appBar: AppBar(
         toolbarHeight: 46,
+        automaticallyImplyLeading: false,
         actions: [
+          IconButton(
+            tooltip: 'Account menu',
+            onPressed: openAccountMenu,
+            icon: const Icon(Icons.account_circle_outlined, size: 22),
+          ),
           if (widget.state.showcaseMode) ...[
             const Center(
               child: Text('DEMO', style: TextStyle(color: muted, fontSize: 10)),
@@ -195,7 +174,6 @@ class _MainScreenState extends State<MainScreen>
           ),
         ),
       ),
-      drawer: buildDrawer(context),
       body: SafeArea(
         child: FadeTransition(
           opacity: navigationOpacity,
@@ -216,10 +194,11 @@ class _MainScreenState extends State<MainScreen>
                 HomeScreen(
                   state: widget.state,
                   openQuest: openQuest,
-                  openFriends: () => selectTab(3),
+                  openFriends: () => selectTab(4),
                 ),
                 QuestsScreen(state: widget.state, openQuest: openQuest),
                 ProgressScreen(state: widget.state),
+                ActivityLogScreen(state: widget.state, openQuest: openQuest),
                 FriendsScreen(state: widget.state, openQuest: openQuest),
               ],
             ),
@@ -245,6 +224,11 @@ class _MainScreenState extends State<MainScreen>
             icon: Icon(Icons.bar_chart_outlined, color: muted),
             selectedIcon: Icon(Icons.bar_chart_rounded, color: green),
             label: 'Progress',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_rounded, color: muted),
+            selectedIcon: Icon(Icons.history_rounded, color: green),
+            label: 'Activity Log',
           ),
           NavigationDestination(
             icon: Icon(Icons.groups_outlined, color: muted),

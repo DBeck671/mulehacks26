@@ -1,3 +1,5 @@
+import 'evidence_helpers.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sidequest/app_state.dart';
@@ -25,7 +27,7 @@ void main() {
     expect(state.challengeContributions, isEmpty);
     expect(state.group.weeklyChallengeProgress, 7);
     state.start(state.quest(2));
-    state.confirmHonor(state.quest(2), true);
+    verifyNonLocation(state, state.quest(2));
     state.complete(state.quest(2));
     expect(state.group.weeklyChallengeProgress, 8);
     expect(state.challengeContributions, [2]);
@@ -50,7 +52,7 @@ void main() {
     expect(state.leaderboard, isEmpty);
     expect(state.rank, 0);
     state.start(state.quest(2));
-    state.confirmHonor(state.quest(2), true);
+    verifyNonLocation(state, state.quest(2));
     state.complete(state.quest(2));
     expect(state.you.xp, 1125);
     expect(state.leaveGroup(), isFalse);

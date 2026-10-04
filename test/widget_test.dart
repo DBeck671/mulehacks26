@@ -1,3 +1,5 @@
+import 'evidence_helpers.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sidequest/main.dart';
@@ -6,13 +8,16 @@ import 'package:sidequest/screens/quest_detail_screen.dart';
 
 void main() {
   testWidgets(
-    'onboarding requires two interests and all four tabs preserve quest state',
+    'onboarding requires two interests and all five tabs preserve quest state',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(const SideQuestApp(demoMode: true));
+      final state = AppState(demoData: true);
+      await tester.pumpWidget(
+        SideQuestApp(demoMode: true, initialState: state),
+      );
       expect(find.byType(NavigationBar), findsNothing);
       await tester.ensureVisible(find.text('START EXPLORING'));
       await tester.tap(find.text('START EXPLORING'));
@@ -37,7 +42,7 @@ void main() {
       await tester.tap(find.text('BUILD MY PATH'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.byType(NavigationDestination), findsNWidgets(4));
+      expect(find.byType(NavigationDestination), findsNWidgets(5));
       expect(find.text('Nature Through a New Lens'), findsOneWidget);
       await tester.ensureVisible(find.text('START SIDEQUEST'));
       await tester.tap(find.text('START SIDEQUEST'));
@@ -55,8 +60,8 @@ void main() {
             .onPressed,
         isNull,
       );
-      await tester.ensureVisible(find.text('Use honor-based confirmation'));
-      await tester.tap(find.text('Use honor-based confirmation'));
+      expect(find.text('Use honor-based confirmation'), findsNothing);
+      verifyNonLocation(state, state.featured);
       await tester.pump();
       await tester.ensureVisible(find.text('COMPLETE SIDEQUEST'));
       await tester.tap(find.text('COMPLETE SIDEQUEST'));

@@ -136,6 +136,7 @@ class _CreateClubSheetState extends State<_CreateClubSheet> {
               decoration: InputDecoration(
                 labelText: 'Club name',
                 hintText: 'Weekend explorers',
+                hintStyle: TextStyle(color: muted.withValues(alpha: .85)),
                 errorText: error,
                 border: const OutlineInputBorder(),
               ),

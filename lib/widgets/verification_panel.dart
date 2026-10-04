@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
@@ -55,12 +56,28 @@ class _VerificationPanelState extends State<VerificationPanel> {
       }
       final bytes = await file.readAsBytes();
       // Browser file filters are hints: decode to reject non-image uploads.
-      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 1400);
+      final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+      final codec = await ui.instantiateImageCodecWithSize(
+        buffer,
+        getTargetSize: (width, height) {
+          final scale = math.min(1.0, 1400 / math.max(width, height));
+          return ui.TargetImageSize(
+            width: math.max(1, (width * scale).round()),
+            height: math.max(1, (height * scale).round()),
+          );
+        },
+      );
       final frame = await codec.getNextFrame();
+      final sanitized = await frame.image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       frame.image.dispose();
       codec.dispose();
       if (mounted && attempt == widget.quest.attemptNumber) {
-        widget.state.setPhoto(widget.quest, bytes);
+        if (sanitized == null) {
+          throw const FormatException('Could not prepare this photo.');
+        }
+        widget.state.setPhoto(widget.quest, sanitized.buffer.asUint8List());
       }
     } on FormatException catch (e) {
       if (mounted) setState(() => error = e.message);
@@ -185,8 +202,47 @@ class _VerificationPanelState extends State<VerificationPanel> {
                     ),
                   ),
                 const SizedBox(height: 10),
+                if (v.photo != null) ...[
+                  FilledButton.icon(
+                    onPressed:
+                        picking ||
+                            v.photoReviewStatus == PhotoReviewStatus.checking ||
+                            v.photoReviewStatus == PhotoReviewStatus.approved ||
+                            v.photoReviewStatus == PhotoReviewStatus.rejected
+                        ? null
+                        : () => widget.state.reviewPhoto(q),
+                    icon: const Icon(Icons.image_search_outlined, size: 18),
+                    label: Text(
+                      v.photoReviewStatus == PhotoReviewStatus.checking
+                          ? 'Checking photo…'
+                          : v.photoReviewStatus == PhotoReviewStatus.error
+                          ? 'Retry photo check'
+                          : 'Check photo',
+                    ),
+                  ),
+                  if (v.photoReviewStatus == PhotoReviewStatus.checking)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: LinearProgressIndicator(),
+                    ),
+                  if (v.photoReviewMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        v.photoReviewMessage!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              v.photoReviewStatus == PhotoReviewStatus.approved
+                              ? q.color
+                              : const Color(0xFFFF6B8A),
+                        ),
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 10),
                 const Text(
-                  'Photos stay on this device. Photo content is not automatically checked.',
+                  'Check photo sends this image to Google Gemini to assess its match. AI can make mistakes; it cannot prove when or who completed the task.',
                   style: TextStyle(color: muted, fontSize: 11, height: 1.5),
                 ),
               ],
@@ -230,7 +286,9 @@ class _VerificationPanelState extends State<VerificationPanel> {
                 ),
               ),
             ],
-            if (editable && v.method != VerificationMethod.location) ...[
+            if (editable &&
+                v.method != VerificationMethod.location &&
+                v.method != VerificationMethod.photo) ...[
               const SizedBox(height: 12),
               const Divider(color: raised),
               CheckboxListTile(

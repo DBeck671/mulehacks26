@@ -22,7 +22,7 @@ Firebase Authentication is required for login and account creation. See the setu
 ## Live demo
 
 1. Start exploring and select Nature + Creativity.
-2. Start the featured **Nature Through a New Lens** quest, add photo evidence (or explicitly confirm on your honor), and complete it for 100 XP.
+2. Start the featured **Nature Through a New Lens** quest, add and verify matching photo evidence, and complete it for 100 XP.
 3. After the XP animation, choose one of three different suggested tasks or **Return to Home**. The task just completed is excluded.
 4. Continue as long as you like. Repeat attempts need fresh verification. The first completion earns full XP; every later completion earns half the base reward (rounded down, minimum 1 XP).
 5. Open **Activity Log** to see completed tasks grouped into one card per task. Each card shows the completion count, total earned XP, latest completion time, and latest verification method. Cards are ordered by most recent completion; individual attempt records remain intact.
@@ -39,7 +39,7 @@ The demo starts at level 4, with 780/1000 level XP (3,780 lifetime XP). Weekly X
 - `lib/screens/`: onboarding, persistent five-tab shell, details, follow-up task choices, activity log, friends, and progress.
 - `lib/widgets/common.dart`: reusable cards, category filters, XP bars, and typography.
 
-`MainScreen` uses an `IndexedStack` to preserve tab state. Quest completion requires starting the quest first and awards XP once per successful attempt: full base XP first, then half base XP on repeats (rounded down, minimum 1). Completed quests can be started again with fresh evidence; completion counts and previously available tasks remain available. Every parent must be completed to unlock a locked quest. One quest can be active at a time. The Activity Log replaces the tree page. Follow-up choices are three distinct, randomly sampled available tasks, in shuffled order, excluding the task just completed. Tasks remain repeatable through Quests or the Activity Log. Consecutive combinations do not repeat when additional candidates exist. Choices stay stable while viewing a completion screen. Selecting a recommendation starts that attempt and replaces the completed details screen, avoiding an ever-growing navigation stack. Returning home leaves no task active.
+`MainScreen` uses an `IndexedStack` to preserve tab state. Quest completion requires starting the quest first and awards XP once per successful attempt: full base XP first, then half base XP on repeats (rounded down, minimum 1). Completed quests can be started again with fresh evidence; completion counts and previously available tasks remain available. Every parent must be completed to unlock a locked quest. Multiple quests can stay in Active; starting another pauses the previous timer and GPS without discarding evidence. The Activity Log replaces the tree page. Follow-up choices are three distinct, randomly sampled available tasks, in shuffled order, excluding the task just completed. Tasks remain repeatable through Quests or the Activity Log. Consecutive combinations do not repeat when additional candidates exist. Choices stay stable while viewing a completion screen. Selecting a recommendation starts that attempt and replaces the completed details screen, avoiding an ever-growing navigation stack. Returning home leaves no task active.
 
 An XP count-up and progress-bar animation plays first after each successful completion. Once it finishes, three task choices fade into view. Failed location checks cannot create log entries or recommendations.
 
@@ -57,16 +57,16 @@ No contacts or background tracking is used. Walks and outdoor movement offer liv
 
 Every quest displays its verification method in the card and details:
 
-- Photo evidence for photography, parks, sunsets, recipes, sketches, and other visual activities. Choose a local image (web and mobile), or take a photo (Android/iOS). Preview, replace, and remove are supported. Invalid images and files over 10 MB are rejected.
+- Photo evidence for photography, parks, sunsets, recipes, sketches, and other visual activities. Choose a local image (web and mobile), or take a photo (Android/iOS). Preview, replace, and remove are supported. Invalid images and files over 10 MB are rejected. Tap **Check photo** to send a resized PNG (with file metadata removed) to Google Gemini through Firebase AI Logic. Only an explicit matching result enables completion. Mismatched or unclear photos ask for a replacement; network, quota, blocked, malformed, and timed-out responses do not pass. Photo quests do not offer honor-based confirmation.
 - Short reflections for reading, learning, and exploration. Write at least 20 characters (up to 600).
 - Activity-specific checklists for stationary wellness activities. Check every step.
 - Location check-ins for walks, parks, detours, morning movement, nature exploration, outdoor adventures, new places, and outdoor routes.
 
-Completion is disabled until the assigned evidence is supplied, or, for non-location quests, the user explicitly chooses honor-based confirmation. Location quests cannot bypass distance verification. The shared state enforces this too. Evidence stays attached to its quest across navigation and can be viewed after completion; each successful repeat starts with fresh evidence, and successful completion summaries and rewards survive restart; pending evidence stays in memory. Nothing is uploaded or shared with the group. This is evidence collection and self-reporting, not automated authenticity or activity recognition. Native camera permissions and device photo picking require a physical-device smoke test; Android process recreation resets this in-memory prototype, including pending evidence.
+Completion is disabled until the assigned evidence is supplied, or, for reflection/checklist quests, the user explicitly chooses honor-based confirmation. Location quests cannot bypass distance verification. The shared state enforces this too. Evidence stays attached to its quest across navigation and can be viewed after completion; each successful repeat starts with fresh evidence, and successful completion summaries and rewards survive restart; pending evidence stays in memory. Photo checks upload only the chosen image and task text to Google when the user taps Check photo; the image is not saved to Firebase Storage or shared with the club by this app. Visual matching cannot prove identity, ownership, freshness, duration, or that the user personally did the task. GPS coordinates and other evidence are not uploaded. Native camera permissions and device photo picking require a physical-device smoke test; Android process recreation resets this in-memory prototype, including pending evidence.
 
 ## Joining demo groups
 
-Friends includes a **Join a group** section accepting either an invite code or group code. Try `SQ-7319` or `INV-7319` to join Curiosity Club. Use `SQ-4821` or `INV-4821` for Weekend Warriors. Codes accept lowercase, optional hyphens, and spaces. Empty, malformed, unknown, and current-group codes get clear feedback. Joined groups appear as selectable chips, and Invite Friend shows and copies the invite code. Leave Group removes your membership and switches to another joined group, or shows the join section when none remain. XP and quest history remain intact.
+Friends includes a **Join a group** section accepting either an invite code or group code. Try `SQ-7319` or `INV-7319` to join Curiosity Club. Use `SQ-4821` or `INV-4821` for Weekend Warriors. Codes accept lowercase, optional hyphens, and spaces. Empty, malformed, unknown, and current-group codes get clear feedback. Joined groups appear as stacked clickable club cards, and Invite Friend shows and copies the invite code. Leave Group removes your membership and switches to another joined group, or shows the join section when none remain. XP and quest history remain intact.
 
 Joining switches the active group without changing XP, quest progress, or verification evidence. Both demo crews include the same sample friends and the same player. Challenge progress and contribution counts are separate for each group. This works locally within the demo session; codes do not connect to another device or server.
 
@@ -122,7 +122,7 @@ To use a different project:
 
 For a local design preview past login, build with `flutter build web --target=lib/preview_main.dart --output=build/preview_web --pwa-strategy=none`. This separate entry does not change the normal authenticated app. Preview history has its own local storage namespace.
 
-Navigation: Home, Quests, Progress and Friends stay in the bottom bar. Account, Activity Log, Settings and Log out are in the top-left drawer. The weekly group quest is at the top of Friends. Quests use stacked horizontal cards. Settings can hide completed quests without removing them from the saved activity log.
+Navigation: Home, Quests, Progress, Activity Log and Friends stay in the bottom bar. The header account button opens Account, Settings and Log out. The weekly group quest is at the top of Friends. Quests use stacked horizontal cards. Settings can hide completed quests without removing them from the saved activity log.
 
 Missing or invalid configuration shows an unavailable login screen with disabled submission; there is no fake login or silently accepted account. Password creation validates 15–128 Unicode characters locally and matching confirmation; Firebase's server policy remains authoritative. Login failures use generic credential feedback and reset feedback does not reveal whether an account exists. Verification email and refresh actions are available in Side menu → Account. Email verification is displayed but is not required to use the local gameplay demo.
 
@@ -206,3 +206,15 @@ and completion status remain separate from the category colour.
 
 Completed quest cards retain their original category icons. Completion is
 shown by status text rather than replacing the task icon with a tick.
+
+## AI photo checking setup
+
+Firebase AI Logic uses the Gemini Developer API with structured JSON output. The SideQuest project has the no-cost provider enabled. The model is `gemini-3.8-flash`, overridable with `--dart-define=PHOTO_REVIEW_MODEL=...`. No Gemini API key or service-account credential is embedded in Flutter. The app only accepts the `match` verdict; `mismatch` and `unclear` require another photo. Checks expire after 30 seconds; replaced images, restarted attempts, and disposed account sessions invalidate pending results. All review evidence stays in memory and repeats require a new image/check.
+
+App Check protects AI Logic. The local presentation entry uses the SDK-generated browser debug token only on localhost/loopback; authorize that token in Firebase Console → App Check → Apps → SideQuest Web → Manage debug tokens. Never commit debug tokens. A local release build of the normal entry can use `--dart-define=PHOTO_CHECK_LOCAL_DEBUG=true`; this still activates only on loopback. Production web builds need `--dart-define=FIREBASE_APPCHECK_SITE_KEY=...` and a registered reCAPTCHA v3 attestation provider. Native release builds use Play Integrity (Android) and App Attest with DeviceCheck fallback (Apple); register the corresponding production attestation providers before testing the native AI flow. Initialization failures leave login usable and photo completion disabled.
+
+## Navigation and club chat
+
+The bottom bar is Home, Quests, Progress, Activity Log, Friends. The sidebar has been removed; the header account icon opens Account, Settings, and Log out for authenticated users. Activity Log retains completed attempts and uses the original category icons.
+
+Open a club card, then the **Group chat** bubble in the club header. Chat messages are scoped to the club for the current account session. In the presentation demo, clearly labeled bots respond with the club’s remaining fixed task list. Leaving a club disables sending, and ending an account session cancels pending replies. Chat is local/session-only, matching the current local club implementation; messages do not synchronize across devices and are not persisted. Real multiplayer chat requires shared server-side membership, message storage, and access rules rather than uploading local demo club IDs.

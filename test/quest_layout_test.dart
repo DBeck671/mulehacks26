@@ -21,7 +21,7 @@ void main() {
               find.byType(NavigationDestination),
             )
             .map((d) => d.label),
-        ['Home', 'Quests', 'Progress', 'Friends'],
+        ['Home', 'Quests', 'Progress', 'Activity Log', 'Friends'],
       );
       await tester.tap(find.text('Progress').last);
       await tester.pump();

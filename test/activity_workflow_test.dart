@@ -1,3 +1,5 @@
+import 'evidence_helpers.dart';
+
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -48,7 +50,7 @@ void main() {
     addTearDown(state.dispose);
     final task = state.quest(4);
     state.start(task);
-    state.confirmHonor(task, true);
+    verifyNonLocation(state, task);
     state.complete(task);
     final seen = <int>{};
     Set<int>? previous;
@@ -72,10 +74,10 @@ void main() {
       addTearDown(state.dispose);
       final task = state.quest(4);
       state.start(task);
-      state.confirmHonor(task, true);
+      verifyNonLocation(state, task);
       state.complete(task);
       state.start(task);
-      state.confirmHonor(task, true);
+      verifyNonLocation(state, task);
       final result = state.complete(task)!;
       await tester.pumpWidget(
         MaterialApp(
@@ -183,9 +185,7 @@ void main() {
       await tester.ensureVisible(find.text('RETURN TO HOME'));
       await tester.tap(find.text('RETURN TO HOME'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Open navigation menu'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Activity Log'));
+      await tester.tap(find.text('Activity Log').last);
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('DO THIS TASK AGAIN →'));
       await tester.tap(find.text('DO THIS TASK AGAIN →'));
@@ -211,7 +211,7 @@ void main() {
       if (chosen.verification.method == VerificationMethod.location) {
         verifyGPS(state, chosen);
       } else {
-        state.confirmHonor(chosen, true);
+        verifyNonLocation(state, chosen);
       }
       await tester.pump();
       await tester.ensureVisible(find.text('COMPLETE SIDEQUEST'));
@@ -225,9 +225,7 @@ void main() {
         0,
       );
       expect(state.active, isNull);
-      await tester.tap(find.byTooltip('Open navigation menu'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Activity Log'));
+      await tester.tap(find.text('Activity Log').last);
       await tester.pumpAndSettle();
       expect(find.text('Learn Something New'), findsOneWidget);
       expect(find.text('Completed 2 times'), findsOneWidget);

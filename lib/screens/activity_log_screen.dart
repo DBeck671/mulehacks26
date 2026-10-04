@@ -87,7 +87,7 @@ class ActivityLogScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.check_circle_outline, color: q.color),
+                        Icon(q.categories.first.icon, color: q.color),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
