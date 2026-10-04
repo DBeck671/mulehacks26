@@ -99,7 +99,8 @@ void main() {
       expect(find.text('880 / 1000 XP'), findsOneWidget);
       await tester.tap(find.text('Quests').last);
       await tester.pump();
-      expect(find.text('Find your next SideQuest.'), findsOneWidget);
+      expect(find.text('Explore'), findsOneWidget);
+      expect(find.text('Active (0)'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

@@ -1,9 +1,11 @@
 import 'dart:math';
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart' hide Category;
 
 import 'data/sample_quests.dart';
+import 'services/quest_audio.dart';
 import 'data/activity_store.dart';
 import 'models/quest.dart';
 import 'models/completed_activity.dart';
@@ -55,7 +57,12 @@ class AppState extends ChangeNotifier {
     Random? recommendationRandom,
     this.activityStore,
     this.demoData = false,
+    this.showcaseMode = false,
   }) : _recommendationRandom = recommendationRandom ?? Random() {
+    if (showcaseMode && !demoData) {
+      throw ArgumentError('Showcase requires isolated demo data');
+    }
+    audio.enabled = showcaseMode;
     player = initialGroup.members.firstWhere((f) => f.id == 0);
     if (!demoData) {
       player.xp = 0;
@@ -71,13 +78,111 @@ class AppState extends ChangeNotifier {
       Group(
         id: 2,
         name: 'Curiosity Club',
-        members: [...initialGroup.members],
+        members: initialGroup.members
+            .map(
+              (f) => f.id == 0
+                  ? you
+                  : Friend(
+                      id: f.id,
+                      name: f.name,
+                      xp: f.xp,
+                      avatarInitial: f.avatarInitial,
+                      questsCompleted: f.questsCompleted,
+                    ),
+            )
+            .toList(),
         groupCode: 'SQ-7319',
         inviteCode: 'INV-7319',
       ),
     );
   }
   final bool demoData;
+  final bool showcaseMode;
+  final QuestAudio audio = QuestAudio();
+  void setSoundEnabled(bool enabled) {
+    audio.enabled = enabled;
+    _saveHistory();
+    notifyListeners();
+    if (enabled) audio.play('tap');
+  }
+
+  bool simulateVerification(Quest q) {
+    if (!showcaseMode || !q.isActive || q.isLocked) return false;
+    q.verification.demoVerified = true;
+    notifyListeners();
+    return true;
+  }
+
+  int _botTurn = 0;
+  Timer? _botTimer;
+  bool demoBotsRunning = false;
+  final Map<int, List<String>> _demoClubActivity = {};
+  List<String> get clubRecentActivity => showcaseMode && hasGroup
+      ? (_demoClubActivity[group.id] ?? [])
+      : recentActivity;
+
+  void _fillDemoFriends(Group club) {
+    if (!showcaseMode) return;
+    const names = ['Alex', 'Jordan', 'Sam', 'Chris'];
+    for (var i = 0; i < names.length; i++) {
+      final id = i + 1;
+      if (!club.members.any((f) => f.id == id)) {
+        club.members.add(
+          Friend(
+            id: id,
+            name: names[i],
+            xp: 0,
+            avatarInitial: names[i][0],
+            questsCompleted: 0,
+          ),
+        );
+      }
+    }
+  }
+
+  void setDemoBotsRunning(bool running) {
+    if (!showcaseMode) return;
+    _botTimer?.cancel();
+    demoBotsRunning = running;
+    if (running) {
+      for (final club in groups) {
+        _fillDemoFriends(club);
+      }
+      simulateFriendCompletion();
+      _botTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+        if (!_disposed) simulateFriendCompletion();
+      });
+    }
+    notifyListeners();
+  }
+
+  bool simulateFriendCompletion() {
+    if (!showcaseMode || !hasGroup) return false;
+    final task = group.partyTasks
+        .where((t) => !t.isCompleted && !quest(t.questId).isActive)
+        .firstOrNull;
+    final bots = group.members.where((f) => f.id != 0).toList();
+    if (task == null || bots.isEmpty) return false;
+    final bot = bots[_botTurn++ % bots.length];
+    final q = quest(task.questId);
+    task.completedById = bot.id;
+    task.completedByName = '${bot.name} (bot)';
+    task.completedAt = DateTime.now();
+    task.earnedXP = q.rewardXP;
+    bot.xp += task.earnedXP;
+    bot.questsCompleted++;
+    if (group.weeklyChallengeProgress < group.weeklyChallengeGoal) {
+      group.weeklyChallengeProgress++;
+    }
+    final entry =
+        '${bot.name} (bot) completed ${q.title} · +${task.earnedXP} XP';
+    recentActivity.insert(0, entry);
+    _demoClubActivity.putIfAbsent(group.id, () => []).insert(0, entry);
+    audio.play('complete');
+    notifyListeners();
+    return true;
+  }
+
   String profileName = '';
   String profileGender = 'Prefer not to say';
   bool get hasProfile => profileName.isNotEmpty;
@@ -101,8 +206,13 @@ class AppState extends ChangeNotifier {
   static Future<AppState> load(
     ActivityStore store, {
     bool demoData = false,
+    bool showcaseMode = false,
   }) async {
-    final state = AppState(activityStore: store, demoData: demoData);
+    final state = AppState(
+      activityStore: store,
+      demoData: demoData,
+      showcaseMode: showcaseMode,
+    );
     try {
       final stored = await store.read();
       if (stored == null) return state;
@@ -117,6 +227,7 @@ class AppState extends ChangeNotifier {
           state.profileName.runes.first,
         ).toUpperCase();
       }
+      state.audio.enabled = data['soundEnabled'] as bool? ?? showcaseMode;
       state.showCompletedQuests = data['showCompletedQuests'] as bool? ?? true;
       state.completedActivities.addAll(
         (data['activities'] as List).map(
@@ -171,6 +282,7 @@ class AppState extends ChangeNotifier {
     if (store == null) return;
     final snapshot = jsonEncode({
       'version': 1,
+      'soundEnabled': audio.enabled,
       'activities': completedActivities.map((e) => e.toJson()).toList(),
       'interests': interests.map((c) => c.name).toList(),
       'showCompletedQuests': showCompletedQuests,
@@ -200,6 +312,11 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _botTimer?.cancel();
+    audio.dispose();
+    for (final q in quests) {
+      q.attemptClock.stop();
+    }
     super.dispose();
   }
 
@@ -238,10 +355,12 @@ class AppState extends ChangeNotifier {
       weeklyChallengeProgress: 0,
       hostId: you.id,
     );
+    _fillDemoFriends(club);
     _generatePartyTasks(club);
     groups.add(club);
     joinedGroupIds.add(club.id);
     activeGroupId = club.id;
+    if (demoBotsRunning) simulateFriendCompletion();
     notifyListeners();
     return club;
   }
@@ -261,6 +380,7 @@ class AppState extends ChangeNotifier {
     if (found == null) return JoinGroupResult.unknownCode;
     if (activeGroupId == found.id) return JoinGroupResult.alreadyActive;
     if (!found.members.any((f) => f.id == 0)) found.members.add(you);
+    _fillDemoFriends(found);
     if (found.partyTasks.isEmpty) _generatePartyTasks(found);
     joinedGroupIds.add(found.id);
     activeGroupId = found.id;
@@ -271,7 +391,7 @@ class AppState extends ChangeNotifier {
   bool leaveGroup() {
     if (!hasGroup) return false;
     final leaving = group;
-    if (_partyAttempt?.groupId == leaving.id) _partyAttempt = null;
+    _partyAttempts.removeWhere((_, attempt) => attempt.groupId == leaving.id);
     leaving.members.removeWhere((f) => f.id == 0);
     joinedGroupIds.remove(leaving.id);
     activeGroupId = joinedGroupIds.firstOrNull;
@@ -314,7 +434,7 @@ class AppState extends ChangeNotifier {
     return choices;
   }
 
-  PartyAttempt? _partyAttempt;
+  final Map<int, PartyAttempt> _partyAttempts = {};
 
   void _generatePartyTasks(Group party) {
     final candidates = quests.where((q) => !q.isLocked && !q.isActive).toList()
@@ -347,15 +467,15 @@ class AppState extends ChangeNotifier {
     final q = quest(questId);
     // Evidence from an already active solo/other-party attempt cannot be reused.
     if (!q.isActive ||
-        _partyAttempt?.groupId != group.id ||
-        _partyAttempt?.round != group.partyRound ||
-        _partyAttempt?.questId != q.id ||
-        _partyAttempt?.attempt != q.attemptNumber) {
+        _partyAttempts[q.id]?.groupId != group.id ||
+        _partyAttempts[q.id]?.round != group.partyRound ||
+        _partyAttempts[q.id]?.questId != q.id ||
+        _partyAttempts[q.id]?.attempt != q.attemptNumber) {
       q.isActive = false;
       q.verification.reset();
     }
     if (!start(q)) return false;
-    _partyAttempt = PartyAttempt(
+    _partyAttempts[q.id] = PartyAttempt(
       group.id,
       group.partyRound,
       q.id,
@@ -420,7 +540,18 @@ class AppState extends ChangeNotifier {
   int get rank => hasGroup ? leaderboard.indexWhere((f) => f.id == 0) + 1 : 0;
   Quest quest(int id) => quests.firstWhere((q) => q.id == id);
   Quest get featured => quest(featuredId);
-  Quest? get active => quests.where((q) => q.isActive).firstOrNull;
+  List<Quest> get activeQuests => quests.where((q) => q.isActive).toList();
+  Quest? nextQuest(Quest current) {
+    final candidates = quests
+        .where((q) => !q.isLocked && !q.isActive && q.id != current.id)
+        .toList();
+    if (candidates.isEmpty) return null;
+    return candidates[_recommendationRandom.nextInt(candidates.length)];
+  }
+
+  Quest? get active =>
+      activeQuests.where((q) => q.attemptClock.isRunning).firstOrNull ??
+      activeQuests.firstOrNull;
   double get treeProgress =>
       quests.where((q) => q.isCompleted).length / quests.length;
   int categoryCount(Category category) => quests
@@ -456,14 +587,18 @@ class AppState extends ChangeNotifier {
 
   bool start(Quest q) {
     if (q.isLocked) return false;
-    if (q.isActive) return true;
-    _partyAttempt = null;
-    q.attemptNumber++;
-    if (q.isCompleted) q.verification.reset();
-    for (final other in quests) {
-      other.isActive = false;
+    for (final other in quests.where((other) => other.id != q.id)) {
       other.attemptClock.stop();
+      pauseRoute(other, notify: false);
     }
+    if (q.isActive) {
+      q.attemptClock.start();
+      notifyListeners();
+      return true;
+    }
+    _partyAttempts.remove(q.id);
+    q.attemptNumber++;
+    q.verification.reset();
     q.attemptClock
       ..reset()
       ..start();
@@ -481,7 +616,7 @@ class AppState extends ChangeNotifier {
       ..stop()
       ..reset();
     q.verification.reset();
-    _partyAttempt = null;
+    _partyAttempts.remove(q.id);
     notifyListeners();
     return true;
   }
@@ -624,8 +759,8 @@ class AppState extends ChangeNotifier {
     if (!q.isActive || q.isLocked || !q.verification.isSatisfied) {
       return null;
     }
-    final partyAttempt = _partyAttempt;
-    _partyAttempt = null;
+    final partyAttempt = _partyAttempts.remove(q.id);
+    audio.play('complete');
     final oldXP = totalXP;
     final reward = q.rewardXP;
     q.earnedXP += reward;
@@ -712,7 +847,13 @@ class AppState extends ChangeNotifier {
         }
       }
     }
-    recentActivity.insert(0, 'You completed ${q.title} · +$reward XP');
+    final personalEntry = 'You completed ${q.title} · +$reward XP';
+    recentActivity.insert(0, personalEntry);
+    if (showcaseMode && contributionGroup != null) {
+      _demoClubActivity
+          .putIfAbsent(contributionGroup.id, () => [])
+          .insert(0, personalEntry);
+    }
     _saveHistory();
     notifyListeners();
     return CompletionResult(

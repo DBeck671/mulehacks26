@@ -57,6 +57,7 @@ class Verification {
   }
 
   void reset() {
+    demoVerified = false;
     photo = null;
     reflection = '';
     checkedSteps.clear();
@@ -138,6 +139,7 @@ class Verification {
   String reflection = '';
   final Set<int> checkedSteps = {};
   bool honorConfirmed = false;
+  bool demoVerified = false;
   bool get hasEvidence => switch (method) {
     VerificationMethod.location => locationVerified,
     VerificationMethod.photo => photo != null && photo!.isNotEmpty,
@@ -146,11 +148,14 @@ class Verification {
       steps.isNotEmpty &&
           List.generate(steps.length, (i) => i).every(checkedSteps.contains),
   };
-  bool get isSatisfied => method == VerificationMethod.location
-      ? locationVerified
-      : honorConfirmed || hasEvidence;
-  String get recordedMethod =>
-      honorConfirmed && method != VerificationMethod.location
+  bool get isSatisfied =>
+      demoVerified ||
+      (method == VerificationMethod.location
+          ? locationVerified
+          : honorConfirmed || hasEvidence);
+  String get recordedMethod => demoVerified
+      ? 'Demo simulation'
+      : honorConfirmed && method != VerificationMethod.location
       ? 'Honor-based confirmation'
       : tracksRoute
       ? 'GPS route tracking'

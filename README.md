@@ -141,3 +141,42 @@ Completing a club/party task shows XP first, then the fixed shared task list and
 Friends prioritizes a compact weekly challenge and one active club card, with shared task progress, Club Activity and Invite actions. Members expand on demand; create/join/leave remain secondary. Common buttons, input fields and bottom sheets share restrained spacing and rounded styles. Bottom tabs fade gently while preserving scroll positions; reduced-motion settings skip the tab fade. Stop task is always reachable in an active quest's top bar.
 
 Progress → Activity tree and locked task → View unlock path display an interactive prerequisite map. Choose any task, see all ancestors and completed/available/locked statuses, and tap a node to open its details. The map fits the screen width and scrolls vertically without pan or zoom. The iPhone 17 Pro Max design viewport is 440 × 956 logical pixels (1320 × 2868 at 3× scale); a browser viewport does not emulate native safe areas, hardware GPS or iOS permissions.
+
+
+### Presentation demo
+
+Run `flutter run -d chrome -t lib/demo_main.dart` or build with
+`flutter build web -t lib/demo_main.dart -o build/demo_web --pwa-strategy=none`.
+This entry skips account login and uses the separate `showcase-demo-v1` local
+history key. The DEMO badge identifies the presentation version. Its existing
+sample members are labelled bots. Every newly created demo club receives four
+dummy friends. They contribute to the fixed shared list every 12 seconds,
+including an initial contribution, and appear in that club's Recent Activity.
+Club Activity includes pause/resume and a manual contribution button. Bot contributions
+update the club and leaderboard, never personal XP or activity history.
+Bot contributions and clubs are session-local and restart on reload.
+The simulator never takes a task currently active for the user and does not
+generate a new task list after completion.
+
+Start a quest, use **Simulate verification · demo**, then complete it to show
+the XP count-up, particle celebration and follow-up choices. Simulated
+completions are labelled **Demo simulation** in history. Normal Firebase
+accounts do not expose either simulation control. Demo history persists
+independently of real users.
+
+Bundled original WAV cues play on navigation, quest start, completion and
+next-task reveal. Mute using the demo header speaker or Settings → Sound
+effects. Normal accounts start with sound off. Playback requires an allowed
+browser user gesture; audio failure never blocks gameplay. Motion respects
+the system reduced-motion preference.
+
+Quests now has **Explore** and **Active** tabs. Started quests remain available
+until completed or explicitly stopped. Switching quests pauses the previous
+timer and GPS route without clearing evidence; opening an Active row resumes
+its timer. GPS still requires an explicit resume/start from the task. Active
+attempts and evidence are session-local; only completed history is persisted.
+
+Before starting a sidequest, tap **Next quest** in its header or swipe left
+to browse another available task. Skipping replaces the current task screen,
+does not start an attempt or award XP, and excludes locked/active tasks.
+Club tasks already started from the shared list keep their club-specific flow.

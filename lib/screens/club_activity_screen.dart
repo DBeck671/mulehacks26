@@ -49,16 +49,42 @@ class ClubActivityScreen extends StatelessWidget {
                     state: state,
                     openQuest: (q) => openPartyTask(context, q),
                   ),
+                  if (state.showcaseMode) ...[
+                    const SizedBox(height: 16),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Demo friends'),
+                      subtitle: Text(
+                        state.demoBotsRunning
+                            ? 'Completing shared tasks automatically'
+                            : 'Paused',
+                      ),
+                      value: state.demoBotsRunning,
+                      onChanged: state.setDemoBotsRunning,
+                    ),
+                    OutlinedButton.icon(
+                      onPressed:
+                          state.group.partyTasks.any(
+                            (t) =>
+                                !t.isCompleted &&
+                                !state.quest(t.questId).isActive,
+                          )
+                          ? () => state.simulateFriendCompletion()
+                          : null,
+                      icon: const Icon(Icons.smart_toy_outlined),
+                      label: const Text('Let a demo friend complete a task'),
+                    ),
+                  ],
                   const SizedBox(height: 30),
                   const Eyebrow('RECENT ACTIVITY'),
                   const SizedBox(height: 14),
                   ...[
-                    ...state.recentActivity.take(3),
-                    if (state.demoData)
+                    ...state.clubRecentActivity.take(6),
+                    if (state.demoData && !state.showcaseMode)
                       'Alex completed Take a Detour · +150 XP',
-                    if (state.demoData)
+                    if (state.demoData && !state.showcaseMode)
                       'Jordan discovered Nature + Creativity · Capture Nature',
-                    if (state.demoData)
+                    if (state.demoData && !state.showcaseMode)
                       'Sam completed Morning Movement · +125 XP',
                   ].map(
                     (text) => Padding(

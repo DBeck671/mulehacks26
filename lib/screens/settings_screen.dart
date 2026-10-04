@@ -22,6 +22,15 @@ class SettingsScreen extends StatelessWidget {
               onChanged: state.setShowCompletedQuests,
             ),
           ),
+          const SizedBox(height: 16),
+          Panel(
+            child: SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Sound effects'),
+              value: state.audio.enabled,
+              onChanged: state.setSoundEnabled,
+            ),
+          ),
           const SizedBox(height: 20),
           const Text(
             'Activity history is saved on this device for your account. Signing out keeps your saved log. Device storage is separate from other devices.',

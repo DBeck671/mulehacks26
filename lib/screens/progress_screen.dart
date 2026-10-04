@@ -37,10 +37,7 @@ class ProgressScreen extends StatelessWidget {
     final achievements = state.achievements;
     return PageBody(
       children: [
-        const PageHeading(
-          'Your Journey',
-          '',
-        ),
+        const PageHeading('Your Journey', ''),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(

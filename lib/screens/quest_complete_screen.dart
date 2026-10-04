@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models/quest.dart';
 import '../widgets/common.dart';
+import '../widgets/completion_burst.dart';
 
 class QuestCompleteScreen extends StatefulWidget {
   const QuestCompleteScreen({
@@ -121,18 +122,25 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
     body: SafeArea(
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 1800),
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 1800),
         curve: Curves.easeOutCubic,
         onEnd: () {
-          if (mounted) setState(() => revealed = true);
+          if (mounted && !revealed) {
+            state.audio.play('reveal');
+            setState(() => revealed = true);
+          }
         },
         builder: (_, progress, _) {
           final gainedXP = (result.awardedXP * progress).round();
           final displayedXP = result.oldXP + gainedXP;
           return PageBody(
             children: [
-              const Center(
-                child: Icon(Icons.check_circle_rounded, color: green, size: 64),
+              CompletionBurst(
+                progress: MediaQuery.disableAnimationsOf(context)
+                    ? 1
+                    : progress,
               ),
               const SizedBox(height: 18),
               const Center(child: Eyebrow('SIDEQUEST COMPLETE', color: green)),
@@ -178,7 +186,25 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
               ],
               const SizedBox(height: 28),
               AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 350),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position:
+                        Tween<Offset>(
+                          begin: const Offset(0, .04),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
+                    child: child,
+                  ),
+                ),
                 child: revealed
                     ? result.club != null
                           ? clubProgress(context)

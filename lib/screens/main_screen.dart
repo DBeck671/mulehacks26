@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app_state.dart';
@@ -24,15 +26,16 @@ class _MainScreenState extends State<MainScreen>
     with SingleTickerProviderStateMixin {
   late final navigationFade = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 180),
+    duration: const Duration(milliseconds: 280),
     value: 1,
   );
   late final navigationOpacity = Tween<double>(
-    begin: .75,
+    begin: .45,
     end: 1,
   ).animate(CurvedAnimation(parent: navigationFade, curve: Curves.easeOut));
   void selectTab(int next) {
     if (next == tab) return;
+    widget.state.audio.play('tap');
     setState(() => tab = next);
     if (!MediaQuery.disableAnimationsOf(context)) {
       navigationFade.forward(from: 0);
@@ -108,8 +111,8 @@ class _MainScreenState extends State<MainScreen>
             const Spacer(),
             const Divider(color: raised),
             ListTile(
-              leading: const Icon(Icons.logout),
-              title: Text(auth == null ? 'Exit preview' : 'Log out'),
+              leading: Icon(auth == null ? Icons.home_outlined : Icons.logout),
+              title: Text(auth == null ? 'Back to home' : 'Log out'),
               onTap: () async {
                 Navigator.pop(context);
                 await widget.state.historySaved;
@@ -126,6 +129,7 @@ class _MainScreenState extends State<MainScreen>
                     }
                   }
                 } else if (context.mounted) {
+                  selectTab(0);
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 }
               },
@@ -162,6 +166,26 @@ class _MainScreenState extends State<MainScreen>
     builder: (_, _) => Scaffold(
       appBar: AppBar(
         toolbarHeight: 46,
+        actions: [
+          if (widget.state.showcaseMode) ...[
+            const Center(
+              child: Text('DEMO', style: TextStyle(color: muted, fontSize: 10)),
+            ),
+            IconButton(
+              tooltip: widget.state.audio.enabled
+                  ? 'Mute sounds'
+                  : 'Enable sounds',
+              onPressed: () =>
+                  widget.state.setSoundEnabled(!widget.state.audio.enabled),
+              icon: Icon(
+                widget.state.audio.enabled
+                    ? Icons.volume_up_outlined
+                    : Icons.volume_off_outlined,
+                size: 20,
+              ),
+            ),
+          ],
+        ],
         title: const Text(
           'SideQuest',
           style: TextStyle(
@@ -175,18 +199,30 @@ class _MainScreenState extends State<MainScreen>
       body: SafeArea(
         child: FadeTransition(
           opacity: navigationOpacity,
-          child: IndexedStack(
-            index: tab,
-            children: [
-              HomeScreen(
-                state: widget.state,
-                openQuest: openQuest,
-                openFriends: () => selectTab(3),
-              ),
-              QuestsScreen(state: widget.state, openQuest: openQuest),
-              ProgressScreen(state: widget.state),
-              FriendsScreen(state: widget.state, openQuest: openQuest),
-            ],
+          child: SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, .015),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: navigationFade,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+            child: IndexedStack(
+              index: tab,
+              children: [
+                HomeScreen(
+                  state: widget.state,
+                  openQuest: openQuest,
+                  openFriends: () => selectTab(3),
+                ),
+                QuestsScreen(state: widget.state, openQuest: openQuest),
+                ProgressScreen(state: widget.state),
+                FriendsScreen(state: widget.state, openQuest: openQuest),
+              ],
+            ),
           ),
         ),
       ),
@@ -280,11 +316,33 @@ class QuestsScreen extends StatefulWidget {
 
 class _QuestsScreenState extends State<QuestsScreen> {
   Category? filter;
+  bool activeOnly = false;
+  Timer? ticker;
+  @override
+  void initState() {
+    super.initState();
+    ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && activeOnly && widget.state.activeQuests.isNotEmpty) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    ticker?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (_, constraints) {
       final quests = widget.state.quests
-          .where((q) => filter == null || q.categories.contains(filter))
+          .where(
+            (q) => activeOnly
+                ? q.isActive
+                : filter == null || q.categories.contains(filter),
+          )
           .where(
             (q) =>
                 widget.state.showCompletedQuests ||
@@ -294,48 +352,73 @@ class _QuestsScreenState extends State<QuestsScreen> {
           .toList();
       return PageBody(
         children: [
-          const PageHeading('Explore', 'Find your next SideQuest.'),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: surface,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: DropdownButton<Category?>(
-              value: filter,
-              isExpanded: true,
-              hint: const Text('All categories'),
-              underline: const SizedBox.shrink(),
-              items: [
-                const DropdownMenuItem<Category?>(
-                  value: null,
-                  child: Text('All categories'),
-                ),
-                ...Category.values.map(
-                  (c) => DropdownMenuItem<Category?>(
-                    value: c,
-                    child: Row(
-                      children: [
-                        Icon(c.icon, color: c.color, size: 18),
-                        const SizedBox(width: 10),
-                        Text(c.label),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-              onChanged: (category) => setState(() {
-                filter = category;
-              }),
-            ),
+          const PageHeading('Quests', ''),
+          SegmentedButton<bool>(
+            showSelectedIcon: false,
+            segments: [
+              const ButtonSegment(value: false, label: Text('Explore')),
+              ButtonSegment(
+                value: true,
+                label: Text('Active (${widget.state.activeQuests.length})'),
+              ),
+            ],
+            selected: {activeOnly},
+            onSelectionChanged: (value) =>
+                setState(() => activeOnly = value.first),
           ),
           const SizedBox(height: 18),
+          if (!activeOnly)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: DropdownButton<Category?>(
+                value: filter,
+                isExpanded: true,
+                hint: const Text('All categories'),
+                underline: const SizedBox.shrink(),
+                items: [
+                  const DropdownMenuItem<Category?>(
+                    value: null,
+                    child: Text('All categories'),
+                  ),
+                  ...Category.values.map(
+                    (c) => DropdownMenuItem<Category?>(
+                      value: c,
+                      child: Row(
+                        children: [
+                          Icon(c.icon, color: c.color, size: 18),
+                          const SizedBox(width: 10),
+                          Text(c.label),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                onChanged: (category) => setState(() {
+                  filter = category;
+                }),
+              ),
+            ),
+          const SizedBox(height: 18),
+          if (activeOnly && quests.isEmpty)
+            const Panel(
+              child: Text(
+                'No active sidequests. Choose one in Explore.',
+                style: TextStyle(color: muted),
+              ),
+            ),
           ...quests.map(
             (quest) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: QuestRowCard(
                 quest: quest,
-                onTap: () => widget.openQuest(quest),
+                onTap: () {
+                  if (quest.isActive) widget.state.start(quest);
+                  widget.openQuest(quest);
+                },
               ),
             ),
           ),

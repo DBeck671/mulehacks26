@@ -146,7 +146,12 @@ class FriendsScreen extends StatelessWidget {
                       style: const TextStyle(color: muted, fontSize: 12),
                     ),
                   ),
-                  title: Text(f.name, style: const TextStyle(fontSize: 14)),
+                  title: Text(
+                    state.showcaseMode && f.id != 0
+                        ? '${f.name} · bot'
+                        : f.name,
+                    style: const TextStyle(fontSize: 14),
+                  ),
                   trailing: f.id == state.group.hostId
                       ? const Text(
                           'Host',

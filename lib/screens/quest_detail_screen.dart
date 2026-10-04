@@ -19,6 +19,49 @@ class QuestDetailScreen extends StatelessWidget {
   final AppState state;
   final Quest quest;
   final VoidCallback? onReturnHome;
+  void nextQuest(BuildContext context) {
+    if (quest.isActive) return;
+    final next = state.nextQuest(quest);
+    if (next == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No other quests available right now.')),
+      );
+      return;
+    }
+    state.audio.play('tap');
+    final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    Navigator.pushReplacement<bool, bool>(
+      context,
+      PageRouteBuilder<bool>(
+        transitionDuration: reducedMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 220),
+        pageBuilder: (_, _, _) => QuestDetailScreen(
+          state: state,
+          quest: next,
+          onReturnHome: onReturnHome,
+        ),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(.12, 0),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
   void stopTask(BuildContext context) {
     state.stop(quest);
     if (onReturnHome != null) {
@@ -35,6 +78,12 @@ class QuestDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Eyebrow('YOUR SIDEQUEST'),
         actions: [
+          if (!quest.isActive)
+            TextButton.icon(
+              onPressed: () => nextQuest(context),
+              label: const Text('Next quest'),
+              icon: const Icon(Icons.chevron_right_rounded, size: 18),
+            ),
           if (quest.isActive)
             TextButton(
               onPressed: () => stopTask(context),
@@ -42,197 +91,230 @@ class QuestDetailScreen extends StatelessWidget {
             ),
         ],
       ),
-      body: SafeArea(
-        child: PageBody(
-          children: [
-            const SizedBox(height: 20),
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: quest.color.withValues(alpha: .1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: quest.color.withValues(alpha: .3)),
-              ),
-              child: Icon(
-                quest.isCompleted
-                    ? Icons.check_rounded
-                    : quest.isLocked
-                    ? Icons.lock_outline
-                    : quest.categories.first.icon,
-                color: quest.color,
-                size: 30,
-              ),
-            ),
-            const SizedBox(height: 22),
-            CategoryBadges(quest.categories),
-            const SizedBox(height: 18),
-            Text(quest.title, style: Theme.of(context).textTheme.headlineLarge),
-            const SizedBox(height: 16),
-            Text(
-              quest.description,
-              style: const TextStyle(color: muted, height: 1.7, fontSize: 16),
-            ),
-            const SizedBox(height: 22),
-            Panel(
-              child: StatStrip(
-                values: [
-                  quest.duration,
-                  quest.difficulty,
-                  '+${quest.rewardXP}',
-                ],
-                labels: const ['Estimated time', 'Difficulty', 'XP reward'],
-              ),
-            ),
-            if (quest.isActive) ...[
-              const SizedBox(height: 18),
-              QuestTimer(
-                key: ValueKey('timer-${quest.id}-${quest.attemptNumber}'),
-                quest: quest,
-              ),
-            ],
-            const SizedBox(height: 28),
-            VerificationPanel(
-              key: ValueKey(quest.attemptNumber),
-              state: state,
-              quest: quest,
-            ),
-            const SizedBox(height: 24),
-            if (quest.isLocked) ...[
-              OutlinedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ActivityTreeScreen(state: state, questId: quest.id),
-                  ),
+      body: GestureDetector(
+        onHorizontalDragEnd: quest.isActive
+            ? null
+            : (details) {
+                if ((details.primaryVelocity ?? 0) < -300) nextQuest(context);
+              },
+        child: SafeArea(
+          child: PageBody(
+            children: [
+              const SizedBox(height: 20),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: quest.color.withValues(alpha: .1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: quest.color.withValues(alpha: .3)),
                 ),
-                icon: const Icon(Icons.account_tree_outlined, size: 18),
-                label: const Text('View unlock path'),
+                child: Icon(
+                  quest.isCompleted
+                      ? Icons.check_rounded
+                      : quest.isLocked
+                      ? Icons.lock_outline
+                      : quest.categories.first.icon,
+                  color: quest.color,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 22),
+              CategoryBadges(quest.categories),
+              const SizedBox(height: 18),
+              Text(
+                quest.title,
+                style: Theme.of(context).textTheme.headlineLarge,
               ),
               const SizedBox(height: 16),
-              const Eyebrow('LOCKED'),
-              const SizedBox(height: 12),
-              const Text(
-                'Complete these activities to open this path:',
-                style: TextStyle(color: muted),
+              Text(
+                quest.description,
+                style: const TextStyle(color: muted, height: 1.7, fontSize: 16),
               ),
-              const SizedBox(height: 12),
-              ...(questParents[quest.id] ?? []).map(
-                (id) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+              const SizedBox(height: 22),
+              Panel(
+                child: StatStrip(
+                  values: [
+                    quest.duration,
+                    quest.difficulty,
+                    '+${quest.rewardXP}',
+                  ],
+                  labels: const ['Estimated time', 'Difficulty', 'XP reward'],
+                ),
+              ),
+              if (quest.isActive) ...[
+                const SizedBox(height: 18),
+                QuestTimer(
+                  key: ValueKey('timer-${quest.id}-${quest.attemptNumber}'),
+                  quest: quest,
+                ),
+              ],
+              if (state.showcaseMode && quest.isActive) ...[
+                const SizedBox(height: 18),
+                OutlinedButton.icon(
+                  onPressed: quest.verification.demoVerified
+                      ? null
+                      : () => state.simulateVerification(quest),
+                  icon: const Icon(Icons.science_outlined),
+                  label: Text(
+                    quest.verification.demoVerified
+                        ? 'Demo verification ready'
+                        : 'Simulate verification · demo',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 28),
+              if (state.showcaseMode && quest.verification.demoVerified)
+                const Panel(
+                  child: Text(
+                    'Demo simulation · ready to complete',
+                    style: TextStyle(color: green),
+                  ),
+                )
+              else
+                VerificationPanel(
+                  key: ValueKey(quest.attemptNumber),
+                  state: state,
+                  quest: quest,
+                ),
+              const SizedBox(height: 24),
+              if (quest.isLocked) ...[
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ActivityTreeScreen(state: state, questId: quest.id),
+                    ),
+                  ),
+                  icon: const Icon(Icons.account_tree_outlined, size: 18),
+                  label: const Text('View unlock path'),
+                ),
+                const SizedBox(height: 16),
+                const Eyebrow('LOCKED'),
+                const SizedBox(height: 12),
+                const Text(
+                  'Complete these activities to open this path:',
+                  style: TextStyle(color: muted),
+                ),
+                const SizedBox(height: 12),
+                ...(questParents[quest.id] ?? []).map(
+                  (id) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          state.quest(id).isCompleted
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
+                          color: state.quest(id).isCompleted ? green : muted,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(state.quest(id).title)),
+                      ],
+                    ),
+                  ),
+                ),
+              ] else if (quest.isCompleted && !quest.isActive) ...[
+                Panel(
+                  color: quest.color,
                   child: Row(
                     children: [
-                      Icon(
-                        state.quest(id).isCompleted
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        color: state.quest(id).isCompleted ? green : muted,
-                        size: 20,
+                      Icon(Icons.verified_rounded, color: quest.color),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Completed ${quest.completionCount} times · ${quest.earnedXP} XP earned',
+                          style: TextStyle(
+                            color: quest.color,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text(state.quest(id).title)),
                     ],
                   ),
                 ),
-              ),
-            ] else if (quest.isCompleted && !quest.isActive) ...[
-              Panel(
-                color: quest.color,
-                child: Row(
-                  children: [
-                    Icon(Icons.verified_rounded, color: quest.color),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Completed ${quest.completionCount} times · ${quest.earnedXP} XP earned',
-                        style: TextStyle(
-                          color: quest.color,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => state.start(quest),
-                  child: const Text('DO SIDEQUEST AGAIN'),
-                ),
-              ),
-            ] else ...[
-              if (quest.isActive) ...[
-                Eyebrow('QUEST ACTIVE', color: quest.color),
-                const SizedBox(height: 14),
-              ],
-              if (!quest.isActive && state.active != null) ...[
-                Text(
-                  'Starting this quest will replace your active quest: ${state.active!.title}.',
-                  style: const TextStyle(
-                    color: muted,
-                    height: 1.5,
-                    fontSize: 12,
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => state.start(quest),
+                    child: const Text('DO SIDEQUEST AGAIN'),
                   ),
                 ),
-                const SizedBox(height: 14),
-              ],
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: quest.isActive && !quest.verification.isSatisfied
-                      ? null
-                      : () async {
-                          if (!quest.isActive) {
-                            state.start(quest);
-                            return;
-                          }
-                          final result = state.complete(quest);
-                          if (result == null) return;
-                          final next = await Navigator.push<Quest>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => QuestCompleteScreen(
-                                state: state,
-                                result: result,
-                              ),
-                            ),
-                          );
-                          if (!context.mounted) return;
-                          if (next == null) {
-                            if (result.club != null) {
-                              Navigator.pop(context, false);
+              ] else ...[
+                if (quest.isActive) ...[
+                  Eyebrow('QUEST ACTIVE', color: quest.color),
+                  const SizedBox(height: 14),
+                ],
+                if (!quest.isActive && state.active != null) ...[
+                  Text(
+                    'Starting this quest will replace your active quest: ${state.active!.title}.',
+                    style: const TextStyle(
+                      color: muted,
+                      height: 1.5,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: quest.isActive && !quest.verification.isSatisfied
+                        ? null
+                        : () async {
+                            if (!quest.isActive) {
+                              state.start(quest);
+                              state.audio.play('start');
                               return;
                             }
-                            if (onReturnHome != null) {
-                              onReturnHome!();
-                            } else {
-                              Navigator.pop(context, true);
-                            }
-                          } else {
-                            Navigator.pushReplacement<bool, bool>(
+                            final result = state.complete(quest);
+                            if (result == null) return;
+                            final next = await Navigator.push<Quest>(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => QuestDetailScreen(
+                                builder: (_) => QuestCompleteScreen(
                                   state: state,
-                                  quest: next,
-                                  onReturnHome: onReturnHome,
+                                  result: result,
                                 ),
                               ),
-                              result: true,
                             );
-                          }
-                        },
-                  child: Text(
-                    quest.isActive ? 'COMPLETE SIDEQUEST' : 'START SIDEQUEST',
+                            if (!context.mounted) return;
+                            if (next == null) {
+                              if (result.club != null) {
+                                Navigator.pop(context, false);
+                                return;
+                              }
+                              if (onReturnHome != null) {
+                                onReturnHome!();
+                              } else {
+                                Navigator.pop(context, true);
+                              }
+                            } else {
+                              Navigator.pushReplacement<bool, bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => QuestDetailScreen(
+                                    state: state,
+                                    quest: next,
+                                    onReturnHome: onReturnHome,
+                                  ),
+                                ),
+                                result: true,
+                              );
+                            }
+                          },
+                    child: Text(
+                      quest.isActive ? 'COMPLETE SIDEQUEST' : 'START SIDEQUEST',
+                    ),
                   ),
                 ),
-              ),
+              ],
+              const SizedBox(height: 24),
             ],
-            const SizedBox(height: 24),
-          ],
+          ),
         ),
       ),
     ),

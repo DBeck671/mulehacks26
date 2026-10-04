@@ -127,13 +127,15 @@ void main() {
       expect(state.group.weeklyChallengeProgress, 10);
     },
   );
-  test('selected interests personalize the featured quest and one quest stays active', () {
+  test('selected interests personalize the featured quest and tasks remain resumable', () {
     state.buildPath({Category.food, Category.learning});
     expect(state.featured.categories.any(state.interests.contains), isTrue);
     state.start(state.quest(5));
     state.start(state.quest(4));
     expect(state.active!.id, 4);
-    expect(state.quest(5).isActive, isFalse);
+    expect(state.quest(5).isActive, isTrue);
+    expect(state.quest(5).attemptClock.isRunning, isFalse);
+    expect(state.activeQuests.map((q) => q.id), containsAll([4, 5]));
     expect(state.nodes.firstWhere((n) => n.questId == 13).parentQuestIds, [
       3,
       2,

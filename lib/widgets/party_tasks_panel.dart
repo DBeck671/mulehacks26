@@ -104,8 +104,8 @@ class PartyTasksPanel extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 8),
-          const Text(
-            'Local demo: party progress stays on this device. Online member updates are not connected yet.',
+          Text(
+            state.showcaseMode ? 'Demo club · friends are simulated bots.' : 'Local demo: party progress stays on this device. Online member updates are not connected yet.',
             style: TextStyle(color: muted, fontSize: 11, height: 1.5),
           ),
         ],

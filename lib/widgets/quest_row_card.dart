@@ -55,7 +55,9 @@ class QuestRowCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    quest.status,
+                    quest.isActive
+                        ? '${quest.attemptClock.isRunning ? 'In progress' : 'Paused'} · ${quest.attemptClock.elapsed.inMinutes}:${(quest.attemptClock.elapsed.inSeconds % 60).toString().padLeft(2, '0')} · ${quest.verification.isSatisfied ? 'Ready to complete' : 'Needs verification'}'
+                        : quest.status,
                     style: TextStyle(
                       color: quest.isActive ? quest.color : muted,
                       fontSize: 10,

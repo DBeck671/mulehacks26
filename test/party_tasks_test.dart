@@ -92,7 +92,8 @@ void main() {
       expect(q.verification.isSatisfied, isFalse);
       expect(state.complete(q), isNull);
       verify(state, q);
-      state.start(state.quest(q.id == 4 ? 2 : 4)); // Abandon the party attempt.
+      state.stop(q); // Explicitly abandon the party attempt.
+      state.start(state.quest(q.id == 4 ? 2 : 4));
       state.start(q);
       verify(state, q);
       state.complete(q);
