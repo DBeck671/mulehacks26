@@ -60,6 +60,8 @@ server/.venv/
 # Generated presentation media
 artifacts/demo/*.jpg
 artifacts/demo/*.mp4
+artifacts/screenshots/**/*.jpg
+artifacts/screenshots/*.zip
 
 # Firebase test dependencies and emulator artifacts
 **/node_modules/
