@@ -78,11 +78,11 @@ class PageHeading extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Eyebrow('SIDEQUEST', color: green),
-        const SizedBox(height: 12),
         Text(title, style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 8),
-        Text(subtitle, style: const TextStyle(color: muted, height: 1.5)),
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(subtitle, style: const TextStyle(color: muted, height: 1.5)),
+        ],
       ],
     ),
   );

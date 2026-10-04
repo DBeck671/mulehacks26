@@ -56,36 +56,10 @@ class FriendsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PageBody(
     children: [
-      const PageHeading('Friends', 'Your clubs. Your people.'),
+      const PageHeading('Friends', ''),
       if (state.hasGroup) ...[
         WeeklyGroupQuest(state: state),
-        const SizedBox(height: 24),
-      ],
-      Wrap(
-        spacing: 10,
-        runSpacing: 8,
-        children: [
-          StartClubPanel(
-            state: state,
-            compact: true,
-            onCreated: () => showCode(context),
-          ),
-          OutlinedButton.icon(
-            onPressed: () => showJoin(context),
-            icon: const Icon(Icons.login_rounded, size: 18),
-            label: const Text('JOIN A GROUP'),
-          ),
-        ],
-      ),
-      const SizedBox(height: 24),
-      if (!state.hasGroup)
-        const Panel(
-          child: Text(
-            'You are not in a group. Join a crew to share your next adventure.',
-            style: TextStyle(color: muted, height: 1.6),
-          ),
-        )
-      else ...[
+        const SizedBox(height: 20),
         if (state.joinedGroups.length > 1) ...[
           Wrap(
             spacing: 8,
@@ -101,114 +75,139 @@ class FriendsScreen extends StatelessWidget {
                 )
                 .toList(),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
         ],
         Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (state.group.hostId == state.you.id) ...[
+                const Eyebrow('YOUR CLUB · HOST'),
+                const SizedBox(height: 10),
+              ],
               Text(
                 state.group.name,
                 style: const TextStyle(
-                  fontSize: 27,
+                  fontSize: 26,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                '${state.group.members.length} ${state.group.members.length == 1 ? 'member' : 'members'}',
+                '${state.group.members.length} ${state.group.members.length == 1 ? 'member' : 'members'} · ${state.group.partyCompletedCount} of ${state.group.partyTasks.length} shared tasks done',
                 style: const TextStyle(color: muted, fontSize: 12),
               ),
-              if (state.group.hostId == state.you.id) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  'YOUR CLUB · HOST',
-                  style: TextStyle(color: green, fontSize: 11),
-                ),
-              ],
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ClubActivityScreen(
+                        state: state,
+                        openQuest: openQuest,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.checklist_rounded, size: 20),
+                  label: const Text('Club Activity'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
                   onPressed: () => showCode(context),
                   icon: const Icon(Icons.person_add_outlined, size: 18),
                   label: const Text('INVITE FRIEND'),
                 ),
               ),
-              const SizedBox(height: 18),
-              const Divider(color: raised),
-              ...state.group.members.map(
-                (f) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: raised,
-                        child: Text(
-                          f.avatarInitial,
-                          style: const TextStyle(color: muted, fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          f.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      if (f.id == state.group.hostId)
-                        const Text(
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: const Border(),
+          collapsedShape: const Border(),
+          title: const Text(
+            'Members',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          children: state.group.members
+              .map(
+                (f) => ListTile(
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: raised,
+                    child: Text(
+                      f.avatarInitial,
+                      style: const TextStyle(color: muted, fontSize: 12),
+                    ),
+                  ),
+                  title: Text(f.name, style: const TextStyle(fontSize: 14)),
+                  trailing: f.id == state.group.hostId
+                      ? const Text(
                           'Host',
                           style: TextStyle(color: muted, fontSize: 11),
-                        ),
-                    ],
-                  ),
+                        )
+                      : null,
                 ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 18),
+      ] else ...[
+        const Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.groups_outlined, color: green, size: 32),
+              SizedBox(height: 16),
+              Text(
+                'Find your people.',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
               ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () {
-                  final name = state.group.name;
-                  state.leaveGroup();
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('Left $name')));
-                },
-                child: const Text('LEAVE GROUP'),
+              SizedBox(height: 10),
+              Text(
+                'You are not in a group. Start a club or join with an invite to complete a shared task list.',
+                style: TextStyle(color: muted, height: 1.5),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        Panel(
-          padding: const EdgeInsets.all(16),
-          child: Material(
-            color: Colors.transparent,
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.bolt_outlined, color: green),
-              title: const Text(
-                'Club Activity',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: const Text(
-                'Party tasks & updates',
-                style: TextStyle(color: muted, fontSize: 11),
-              ),
-              trailing: const Icon(
-                Icons.arrow_forward_rounded,
-                size: 18,
-                color: muted,
-              ),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      ClubActivityScreen(state: state, openQuest: openQuest),
-                ),
-              ),
-            ),
+        const SizedBox(height: 20),
+      ],
+      Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          StartClubPanel(
+            state: state,
+            compact: true,
+            onCreated: () => showCode(context),
           ),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            onPressed: () => showJoin(context),
+            icon: const Icon(Icons.login_rounded, size: 18),
+            label: const Text('JOIN A GROUP'),
+          ),
+        ],
+      ),
+      if (state.hasGroup) ...[
+        const SizedBox(height: 12),
+        TextButton(
+          onPressed: () {
+            final name = state.group.name;
+            state.leaveGroup();
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('Left $name')));
+          },
+          child: const Text('LEAVE GROUP'),
         ),
       ],
     ],

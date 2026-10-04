@@ -78,6 +78,7 @@ void main() {
           ),
         ),
       );
+      await tester.ensureVisible(find.text('JOIN A GROUP'));
       await tester.tap(find.text('JOIN A GROUP'));
       await tester.pumpAndSettle();
       expect(find.text('Invite code or group code'), findsOneWidget);

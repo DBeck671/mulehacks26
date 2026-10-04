@@ -276,7 +276,7 @@ class _LocationVerificationState extends State<LocationVerification>
           ),
         const SizedBox(height: 12),
         const Text(
-          'Keep this task open while walking or running. Weak GPS, jumps and tracking gaps are not counted; accuracy margins are deducted. Tracking pauses when you leave the task or background the app. Coordinates stay in this session on your device.',
+          'Keep this task open. Tracking pauses when you leave; movement while paused does not count.',
           style: TextStyle(color: muted, fontSize: 11, height: 1.5),
         ),
       ],

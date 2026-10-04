@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models/quest.dart';
 import '../widgets/common.dart';
+import 'activity_tree_screen.dart';
 
 class ProgressScreen extends StatelessWidget {
   const ProgressScreen({super.key, required this.state});
@@ -38,8 +39,22 @@ class ProgressScreen extends StatelessWidget {
       children: [
         const PageHeading(
           'Your Journey',
-          'Look how far your curiosity has taken you.',
+          '',
         ),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ActivityTreeScreen(state: state),
+              ),
+            ),
+            icon: const Icon(Icons.account_tree_outlined, size: 20),
+            label: const Text('Activity tree'),
+          ),
+        ),
+        const SizedBox(height: 20),
         Panel(
           color: green,
           child: Column(

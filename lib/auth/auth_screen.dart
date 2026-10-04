@@ -246,7 +246,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Sign in securely with Firebase. Your Activity Log is saved for this account on this device.',
+                      'Your activity is saved for this account on this device.',
                       style: TextStyle(color: muted, fontSize: 11, height: 1.5),
                     ),
                   ],

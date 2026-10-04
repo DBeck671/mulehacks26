@@ -20,7 +20,31 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen>
+    with SingleTickerProviderStateMixin {
+  late final navigationFade = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+    value: 1,
+  );
+  late final navigationOpacity = Tween<double>(
+    begin: .75,
+    end: 1,
+  ).animate(CurvedAnimation(parent: navigationFade, curve: Curves.easeOut));
+  void selectTab(int next) {
+    if (next == tab) return;
+    setState(() => tab = next);
+    if (!MediaQuery.disableAnimationsOf(context)) {
+      navigationFade.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    navigationFade.dispose();
+    super.dispose();
+  }
+
   int tab = 0;
   void openMenuPage(Widget page) {
     Navigator.pop(context);
@@ -114,7 +138,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void returnHome() {
-    setState(() => tab = 0);
+    selectTab(0);
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
@@ -129,7 +153,7 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
     );
-    if (completed == true && mounted) setState(() => tab = 0);
+    if (completed == true && mounted) selectTab(0);
   }
 
   @override
@@ -149,23 +173,26 @@ class _MainScreenState extends State<MainScreen> {
       ),
       drawer: buildDrawer(context),
       body: SafeArea(
-        child: IndexedStack(
-          index: tab,
-          children: [
-            HomeScreen(
-              state: widget.state,
-              openQuest: openQuest,
-              openFriends: () => setState(() => tab = 3),
-            ),
-            QuestsScreen(state: widget.state, openQuest: openQuest),
-            ProgressScreen(state: widget.state),
-            FriendsScreen(state: widget.state, openQuest: openQuest),
-          ],
+        child: FadeTransition(
+          opacity: navigationOpacity,
+          child: IndexedStack(
+            index: tab,
+            children: [
+              HomeScreen(
+                state: widget.state,
+                openQuest: openQuest,
+                openFriends: () => selectTab(3),
+              ),
+              QuestsScreen(state: widget.state, openQuest: openQuest),
+              ProgressScreen(state: widget.state),
+              FriendsScreen(state: widget.state, openQuest: openQuest),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
-        onDestinationSelected: (i) => setState(() => tab = i),
+        onDestinationSelected: selectTab,
         height: 76,
         destinations: const [
           NavigationDestination(
@@ -212,10 +239,7 @@ class HomeScreen extends StatelessWidget {
         style: Theme.of(context).textTheme.headlineLarge,
       ),
       const SizedBox(height: 12),
-      const Text(
-        'A small step can open a whole new world.',
-        style: TextStyle(color: muted, fontSize: 13),
-      ),
+      const Text('', style: TextStyle(color: muted, fontSize: 13)),
       const SizedBox(height: 26),
       XPBar(totalXP: state.totalXP),
       const SizedBox(height: 32),

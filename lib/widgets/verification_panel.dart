@@ -186,7 +186,7 @@ class _VerificationPanelState extends State<VerificationPanel> {
                   ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Stored on this device for this session. Nothing is uploaded. Photo content is not automatically judged.',
+                  'Photos stay on this device. Photo content is not automatically checked.',
                   style: TextStyle(color: muted, fontSize: 11, height: 1.5),
                 ),
               ],

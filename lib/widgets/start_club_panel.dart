@@ -16,6 +16,13 @@ class StartClubPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => compact
       ? FilledButton.icon(
+          style: state.hasGroup
+              ? FilledButton.styleFrom(
+                  backgroundColor: surface,
+                  foregroundColor: green,
+                  side: const BorderSide(color: raised),
+                )
+              : null,
           icon: const Icon(Icons.group_add_outlined),
           label: const Text('START A CLUB'),
           onPressed: () async {

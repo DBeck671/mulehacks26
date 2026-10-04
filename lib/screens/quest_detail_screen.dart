@@ -7,6 +7,7 @@ import '../widgets/common.dart';
 import '../widgets/quest_timer.dart';
 import '../widgets/verification_panel.dart';
 import 'quest_complete_screen.dart';
+import 'activity_tree_screen.dart';
 
 class QuestDetailScreen extends StatelessWidget {
   const QuestDetailScreen({
@@ -18,21 +19,39 @@ class QuestDetailScreen extends StatelessWidget {
   final AppState state;
   final Quest quest;
   final VoidCallback? onReturnHome;
+  void stopTask(BuildContext context) {
+    state.stop(quest);
+    if (onReturnHome != null) {
+      onReturnHome!();
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: state,
     builder: (_, _) => Scaffold(
-      appBar: AppBar(title: const Eyebrow('YOUR SIDEQUEST')),
+      appBar: AppBar(
+        title: const Eyebrow('YOUR SIDEQUEST'),
+        actions: [
+          if (quest.isActive)
+            TextButton(
+              onPressed: () => stopTask(context),
+              child: const Text('Stop task'),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: PageBody(
           children: [
             const SizedBox(height: 20),
             Container(
-              width: 88,
-              height: 88,
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
                 color: quest.color.withValues(alpha: .1),
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: quest.color.withValues(alpha: .3)),
               ),
               child: Icon(
@@ -42,10 +61,10 @@ class QuestDetailScreen extends StatelessWidget {
                     ? Icons.lock_outline
                     : quest.categories.first.icon,
                 color: quest.color,
-                size: 40,
+                size: 30,
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 22),
             CategoryBadges(quest.categories),
             const SizedBox(height: 18),
             Text(quest.title, style: Theme.of(context).textTheme.headlineLarge),
@@ -54,7 +73,7 @@ class QuestDetailScreen extends StatelessWidget {
               quest.description,
               style: const TextStyle(color: muted, height: 1.7, fontSize: 16),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 22),
             Panel(
               child: StatStrip(
                 values: [
@@ -80,6 +99,18 @@ class QuestDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             if (quest.isLocked) ...[
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ActivityTreeScreen(state: state, questId: quest.id),
+                  ),
+                ),
+                icon: const Icon(Icons.account_tree_outlined, size: 18),
+                label: const Text('View unlock path'),
+              ),
+              const SizedBox(height: 16),
               const Eyebrow('LOCKED'),
               const SizedBox(height: 12),
               const Text(
@@ -200,39 +231,7 @@ class QuestDetailScreen extends StatelessWidget {
                 ),
               ),
             ],
-            if (quest.isActive) ...[
-              const SizedBox(height: 12),
-              TextButton.icon(
-                onPressed: () {
-                  state.stop(quest);
-                  if (onReturnHome != null) {
-                    onReturnHome!();
-                  } else {
-                    Navigator.pop(context);
-                  }
-                },
-                icon: const Icon(Icons.stop_circle_outlined),
-                label: const Text('Stop task'),
-              ),
-              const Text(
-                'Stopping earns no XP and adds nothing to your Activity Log.',
-                style: TextStyle(color: muted, fontSize: 12),
-              ),
-            ],
             const SizedBox(height: 24),
-            const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.shield_outlined, size: 17, color: muted),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Location is used only for the check-ins or GPS tracking you start. Walking and running tracking pauses when you leave this task.\n\nYour evidence stays on this device for the current attempt. Successful task summaries are saved in your Activity Log. Photos are not automatically reviewed; GPS quests must meet their distance target.',
-                    style: TextStyle(color: muted, fontSize: 11, height: 1.6),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),

@@ -91,7 +91,7 @@ class _QuestTimerState extends State<QuestTimer> {
           ],
           const SizedBox(height: 10),
           const Text(
-            'Time is a guide. Complete the activity and its verification to earn XP. Pausing this timer does not pause GPS tracking.',
+            'Time is an estimate. Verification is required. Timer and GPS pause separately.',
             style: TextStyle(color: muted, fontSize: 11, height: 1.5),
           ),
         ],

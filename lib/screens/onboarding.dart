@@ -265,7 +265,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Your profile is saved on this device for your account. Gender does not affect quest suggestions.',
+            'Gender is optional.',
             style: TextStyle(color: muted, fontSize: 12, height: 1.5),
           ),
           const SizedBox(height: 26),

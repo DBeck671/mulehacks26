@@ -46,8 +46,8 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
         const SizedBox(height: 16),
         Text(
           club.isComplete
-              ? 'Your club finished every task in this shared list. Head back to celebrate with your club.'
-              : 'These are the tasks in your shared list. Choose an unfinished task or return to your club.',
+              ? 'Your shared list is complete.'
+              : 'Choose an unfinished club task.',
           style: const TextStyle(color: muted, height: 1.5),
         ),
         const SizedBox(height: 20),
@@ -195,7 +195,7 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                                 ),
                                 const SizedBox(height: 10),
                                 const Text(
-                                  'Choose a task to keep going, or head home and take a break.',
+                                  'Choose your next adventure.',
                                   style: TextStyle(color: muted, height: 1.5),
                                 ),
                                 const SizedBox(height: 20),
