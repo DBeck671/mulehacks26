@@ -345,9 +345,24 @@ class AppState extends ChangeNotifier {
         ),
       );
       state._unlockBadges();
-      final equipped = data['equippedBadge'] as String?;
-      if (state._earnedBadgeIds.contains(equipped)) {
-        state.equippedBadgeId = equipped;
+      final savedBadges = data['equippedBadges'];
+      if (savedBadges is List) {
+        state._equippedBadgeIds
+          ..clear()
+          ..addAll(
+            savedBadges
+                .whereType<String>()
+                .where(state.hasBadge)
+                .toSet()
+                .take(maxDisplayedBadges),
+          );
+      } else {
+        final equipped = data['equippedBadge'] as String?;
+        if (state.hasBadge(equipped ?? '')) {
+          state._equippedBadgeIds
+            ..clear()
+            ..add(equipped!);
+        }
       }
       return state;
     } catch (_) {
@@ -369,7 +384,7 @@ class AppState extends ChangeNotifier {
       'profileGender': profileGender,
       'rewardClaims': rewardClaims.map((c) => c.toJson()).toList(),
       'earnedBadges': _earnedBadgeIds.toList(),
-      'equippedBadge': equippedBadgeId,
+      'equippedBadges': _equippedBadgeIds,
     });
     // Serialize writes so a slower earlier completion cannot replace a newer one.
     _pendingSave = _pendingSave.then((_) async {
@@ -391,35 +406,42 @@ class AppState extends ChangeNotifier {
   int get tokenBalance => tokensEarned - tokensSpent;
   final List<RewardClaim> rewardClaims = [];
   final Set<String> _earnedBadgeIds = {};
-  String? equippedBadgeId;
+  static const maxDisplayedBadges = 3;
+  final List<String> _equippedBadgeIds = [];
+  List<String> get equippedBadgeIds => List.unmodifiable(_equippedBadgeIds);
   bool hasBadge(String id) => _earnedBadgeIds.contains(id);
-  bool equipBadge(String id) {
+
+  /// Toggles an earned badge. Rejects additions beyond the display limit.
+  bool toggleBadge(String id) {
     if (!hasBadge(id)) return false;
-    equippedBadgeId = id;
+    if (_equippedBadgeIds.contains(id)) {
+      _equippedBadgeIds.remove(id);
+    } else {
+      if (_equippedBadgeIds.length >= maxDisplayedBadges) return false;
+      _equippedBadgeIds.add(id);
+    }
     _saveHistory();
     notifyListeners();
     return true;
   }
 
-  QuestBadge? badgeFor(Friend friend) {
-    final id = friend.id == you.id
-        ? equippedBadgeId
+  List<QuestBadge> badgesFor(Friend friend) {
+    final ids = friend.id == you.id
+        ? _equippedBadgeIds
         : showcaseMode && friend.questsCompleted > 0
-        ? friend.questsCompleted >= 10
-              ? 'adventurer'
-              : 'first'
-        : null;
-    return questBadges.where((b) => b.id == id).firstOrNull;
+        ? [friend.questsCompleted >= 10 ? 'adventurer' : 'first']
+        : <String>[];
+    return [for (final id in ids) ...questBadges.where((b) => b.id == id)];
   }
 
   void _unlockBadges() {
     if (completedActivities.isEmpty) return;
-    _earnedBadgeIds.add('first');
+    final firstUnlock = _earnedBadgeIds.add('first');
     final eligible = achievements;
     for (var i = 0; i < eligible.length; i++) {
       if (eligible[i]) _earnedBadgeIds.add(questBadges[i + 1].id);
     }
-    equippedBadgeId ??= 'first';
+    if (firstUnlock) _equippedBadgeIds.add('first');
   }
 
   RewardClaim? claimReward(String rewardId) {

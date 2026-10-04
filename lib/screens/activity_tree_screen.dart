@@ -13,10 +13,12 @@ class ActivityTreeScreen extends StatefulWidget {
     super.key,
     required this.state,
     this.questId = 13,
+    this.embedded = false,
     this.onReturnQuests,
   });
   final AppState state;
   final int questId;
+  final bool embedded;
   final VoidCallback? onReturnQuests;
   @override
   State<ActivityTreeScreen> createState() => _ActivityTreeScreenState();
@@ -171,6 +173,7 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
       final parents = questParents[selected] ?? <int>[];
       return Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: !widget.embedded,
           title: const Text('Activity tree'),
           actions: [
             IconButton(
@@ -191,6 +194,8 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
           ],
         ),
         body: SafeArea(
+          top: !widget.embedded,
+          bottom: !widget.embedded,
           child: Column(
             children: [
               Expanded(

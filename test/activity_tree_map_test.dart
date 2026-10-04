@@ -2,10 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sidequest/app_state.dart';
 import 'package:sidequest/screens/activity_tree_screen.dart';
+import 'package:sidequest/screens/progress_screen.dart';
 
 import 'gps_helpers.dart';
 
 void main() {
+  testWidgets(
+    'Progress embeds the interactive tree below the level and removes duplicate rewards and achievements',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final state = AppState();
+      addTearDown(state.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (_, child) => MediaQuery(
+            data: const MediaQueryData(
+              size: Size(390, 844),
+              disableAnimations: true,
+            ),
+            child: child!,
+          ),
+          home: Scaffold(body: ProgressScreen(state: state)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Rewards & badges'), findsNothing);
+      expect(find.text('ACHIEVEMENTS'), findsNothing);
+      expect(find.text('Achievements'), findsNothing);
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+      final levelY = tester.getTopLeft(find.text('Level 1').first).dy;
+      final treeY = tester.getTopLeft(find.byType(ActivityTreeScreen)).dy;
+      expect(treeY, greaterThan(levelY));
+      await tester.ensureVisible(find.byTooltip('Zoom in'));
+      await tester.tap(find.byTooltip('Zoom in'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   testWidgets(
     'unlock map shows all parents, updates after completion and opens task details',
     (tester) async {

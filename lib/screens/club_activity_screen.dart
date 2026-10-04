@@ -89,11 +89,15 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
                 Text(
                   state.showcaseMode && f.id != 0 ? '${f.name} · bot' : f.name,
                 ),
-                if (state.badgeFor(f) case final badge?) ...[
+                if (state.badgesFor(f).isNotEmpty) ...[
                   const SizedBox(height: 5),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: MemberBadge(badge: badge),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final badge in state.badgesFor(f))
+                        MemberBadge(badge: badge),
+                    ],
                   ),
                 ],
               ],

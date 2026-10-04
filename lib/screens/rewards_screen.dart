@@ -212,26 +212,49 @@ class RewardsScreen extends StatelessWidget {
             );
           }),
           const SizedBox(height: 20),
-          const Eyebrow('YOUR BADGES'),
+          Row(
+            children: [
+              const Expanded(child: Eyebrow('YOUR BADGES')),
+              Text(
+                '${state.equippedBadgeIds.length} / ${AppState.maxDisplayedBadges} displayed',
+                style: const TextStyle(color: muted, fontSize: 12),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           const Text(
-            'Choose a badge to wear beside your name in clubs.',
+            'Choose up to three. Tap a selected badge to remove it.',
             style: TextStyle(color: muted, fontSize: 12),
           ),
           const SizedBox(height: 16),
           ...questBadges.map((badge) {
             final earned = state.hasBadge(badge.id),
-                equipped = state.equippedBadgeId == badge.id;
+                equipped = state.equippedBadgeIds.contains(badge.id);
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Material(
                 color: surface,
                 borderRadius: BorderRadius.circular(18),
                 child: ListTile(
+                  key: ValueKey('badge-choice-${badge.id}'),
+                  selected: equipped,
+                  selectedTileColor: badge.color.withValues(alpha: .06),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  onTap: earned ? () => state.equipBadge(badge.id) : null,
+                  onTap: earned
+                      ? () {
+                          if (!state.toggleBadge(badge.id)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Choose up to three badges. Remove one to add another.',
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      : null,
                   leading: Icon(
                     badge.icon,
                     color: earned ? badge.color : muted,
@@ -254,7 +277,7 @@ class RewardsScreen extends StatelessWidget {
                   ),
                   trailing: equipped
                       ? const Text(
-                          'Wearing',
+                          'Selected',
                           style: TextStyle(color: green, fontSize: 11),
                         )
                       : earned

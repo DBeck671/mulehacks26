@@ -209,9 +209,12 @@ class _MainScreenState extends State<MainScreen>
                   openFriends: () => selectTab(4),
                 ),
                 QuestsScreen(state: widget.state, openQuest: openQuest),
-                ProgressScreen(
-                  state: widget.state,
-                  onReturnQuests: returnQuests,
+                TickerMode(
+                  enabled: tab == 2,
+                  child: ProgressScreen(
+                    state: widget.state,
+                    onReturnQuests: returnQuests,
+                  ),
                 ),
                 ActivityLogScreen(state: widget.state, openQuest: openQuest),
                 FriendsScreen(state: widget.state, openQuest: openQuest),

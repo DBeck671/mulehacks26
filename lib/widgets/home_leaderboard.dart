@@ -82,6 +82,8 @@ class HomeLeaderboard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       f.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: me ? green : Colors.white,
                         fontSize: 12,
@@ -89,12 +91,12 @@ class HomeLeaderboard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (state.badgeFor(f) case final badge?) ...[
+                  for (final badge in state.badgesFor(f)) ...[
                     Tooltip(
                       message: badge.title,
                       child: Icon(badge.icon, color: badge.color, size: 15),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                   ],
                   TweenAnimationBuilder<double>(
                     tween: Tween(end: f.xp.toDouble()),
