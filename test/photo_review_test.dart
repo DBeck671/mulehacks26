@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:firebase_ai/firebase_ai.dart';
 import 'package:sidequest/app_state.dart';
 import 'package:sidequest/models/verification.dart';
 import 'package:sidequest/services/photo_verifier.dart';
@@ -26,6 +27,34 @@ class PendingPhotoVerifier implements PhotoVerifier {
 }
 
 void main() {
+  test('provider failures explain missing config, quota and App Check without exposing diagnostics', () {
+    expect(
+      FirebasePhotoVerifier.failureMessage(
+        ServerException(
+          'Firebase AI Logic genai config not found. Learn more: secret-url',
+        ),
+      ),
+      contains('Gemini Developer API linked'),
+    );
+    expect(
+      FirebasePhotoVerifier.failureMessage(
+        QuotaExceeded('private provider details'),
+      ),
+      contains('free usage limit'),
+    );
+    expect(
+      FirebasePhotoVerifier.failureMessage(
+        ServerException('Invalid App Check token'),
+      ),
+      contains('not authorized'),
+    );
+    expect(
+      FirebasePhotoVerifier.failureMessage(
+        ServerException('private provider details'),
+      ),
+      isNot(contains('private provider details')),
+    );
+  });
   test('only approved photos award XP; mismatch and outage fail closed, retry succeeds', () async {
     final verifier = PendingPhotoVerifier();
     final state = AppState(photoVerifier: verifier);

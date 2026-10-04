@@ -108,7 +108,6 @@ class AppState extends ChangeNotifier {
     audio.enabled = enabled;
     _saveHistory();
     notifyListeners();
-    if (enabled) audio.play('tap');
   }
 
   bool simulateVerification(Quest q) {
@@ -230,7 +229,6 @@ class AppState extends ChangeNotifier {
         '${bot.name} (bot) completed ${q.title} · +${task.earnedXP} XP';
     recentActivity.insert(0, entry);
     _demoClubActivity.putIfAbsent(group.id, () => []).insert(0, entry);
-    audio.play('complete');
     notifyListeners();
     return true;
   }
@@ -522,6 +520,13 @@ class AppState extends ChangeNotifier {
         .firstOrNull;
     if (task == null) return false;
     final q = quest(questId);
+    if (!canStart(q)) return false;
+    if (q.isActive &&
+        _partyAttempts[q.id]?.groupId == group.id &&
+        _partyAttempts[q.id]?.round == group.partyRound &&
+        _partyAttempts[q.id]?.attempt == q.attemptNumber) {
+      return true; // Viewing an existing party attempt never resumes its timer.
+    }
     // Evidence from an already active solo/other-party attempt cannot be reused.
     if (!q.isActive ||
         _partyAttempts[q.id]?.groupId != group.id ||
@@ -643,7 +648,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool start(Quest q) {
-    if (q.isLocked) return false;
+    if (!canStart(q)) return false;
     for (final other in quests.where((other) => other.id != q.id)) {
       other.attemptClock.stop();
       pauseRoute(other, notify: false);
@@ -665,6 +670,10 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
+  static const maxActiveQuests = 2;
+  bool canStart(Quest q) =>
+      !q.isLocked && (q.isActive || activeQuests.length < maxActiveQuests);
+
   bool stop(Quest q) {
     if (!q.isActive) return false;
     q.isActive = false;
@@ -682,6 +691,12 @@ class AppState extends ChangeNotifier {
     if (!q.isActive) return;
     q.attemptClock.stop();
     pauseRoute(q, notify: false);
+    notifyListeners();
+  }
+
+  void toggleTaskTimer(Quest q) {
+    if (!q.isActive) return;
+    q.attemptClock.isRunning ? q.attemptClock.stop() : q.attemptClock.start();
     notifyListeners();
   }
 

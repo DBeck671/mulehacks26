@@ -356,7 +356,7 @@ class QuestCard extends StatelessWidget {
                       onPressed: onTap,
                       child: Text(
                         quest.isCompleted && !quest.isActive
-                            ? 'DO SIDEQUEST AGAIN'
+                            ? 'START SIDEQUEST'
                             : quest.isActive
                             ? 'CONTINUE SIDEQUEST'
                             : 'START SIDEQUEST',

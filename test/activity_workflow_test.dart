@@ -190,8 +190,8 @@ void main() {
       await tester.ensureVisible(find.text('DO THIS TASK AGAIN →'));
       await tester.tap(find.text('DO THIS TASK AGAIN →'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('DO SIDEQUEST AGAIN'));
-      await tester.tap(find.text('DO SIDEQUEST AGAIN'));
+      await tester.ensureVisible(find.text('START SIDEQUEST'));
+      await tester.tap(find.text('START SIDEQUEST'));
       await tester.pumpAndSettle();
       expect(state.active!.id, 4);
       expect(

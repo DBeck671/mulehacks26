@@ -21,7 +21,16 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
   _ClubView view = _ClubView.tasks;
   AppState get state => widget.state;
   void openPartyTask(BuildContext context, Quest quest) {
-    if (!state.startPartyTask(quest.id)) return;
+    if (!state.startPartyTask(quest.id)) {
+      if (!state.canStart(quest)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Two quests are active. Complete or stop one first.'),
+          ),
+        );
+      }
+      return;
+    }
     if (widget.openQuest != null) {
       widget.openQuest!(quest);
     } else {

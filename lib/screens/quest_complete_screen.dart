@@ -104,6 +104,14 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                         state.selectGroup(club.groupId);
                         if (state.startPartyTask(id)) {
                           Navigator.pop<Quest>(context, q);
+                        } else if (!state.canStart(q)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Two quests are active. Complete or stop one first.',
+                              ),
+                            ),
+                          );
                         }
                       },
                       child: const Text('CONTINUE CLUB TASK'),
@@ -128,7 +136,6 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
         curve: Curves.easeOutCubic,
         onEnd: () {
           if (mounted && !revealed) {
-            state.audio.play('reveal');
             setState(() => revealed = true);
           }
         },
@@ -235,6 +242,15 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                                         onTap: () {
                                           if (state.start(q)) {
                                             Navigator.pop<Quest>(context, q);
+                                          } else if (!state.canStart(q)) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Two quests are active. Complete or stop one first.',
+                                                    ),
+                                                  ),
+                                                );
                                           }
                                         },
                                       ),

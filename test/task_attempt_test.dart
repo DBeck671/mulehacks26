@@ -5,8 +5,79 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sidequest/app_state.dart';
 import 'package:sidequest/screens/quest_detail_screen.dart';
 import 'package:sidequest/widgets/quest_timer.dart';
+import 'package:sidequest/screens/main_screen.dart';
+import 'package:sidequest/widgets/quest_row_card.dart';
 
 void main() {
+  test('club starts enforce the same limit and reopening preserves a paused attempt', () {
+    final state = AppState(demoData: true);
+    addTearDown(state.dispose);
+    final id = state.group.partyTasks.first.questId;
+    final q = state.quest(id);
+    final others = state.quests
+        .where((other) => !other.isLocked && other.id != id)
+        .take(2)
+        .toList();
+    state.start(others[0]);
+    state.start(others[1]);
+    expect(state.startPartyTask(id), isFalse);
+    expect(q.isActive, isFalse);
+    expect(q.attemptNumber, 0);
+    state.stop(others[0]);
+    expect(state.startPartyTask(id), isTrue);
+    state.pauseTask(q);
+    final attempt = q.attemptNumber;
+    expect(state.startPartyTask(id), isTrue);
+    expect(q.attemptClock.isRunning, isFalse);
+    expect(q.attemptNumber, attempt);
+  });
+  test('two active attempts include paused tasks; blocked starts preserve evidence', () {
+    final state = AppState();
+    addTearDown(state.dispose);
+    final first = state.quest(2),
+        second = state.quest(5),
+        third = state.quest(4);
+    expect(state.start(first), isTrue);
+    state.pauseTask(first);
+    expect(state.start(second), isTrue);
+    state.pauseTask(second);
+    final attempt = third.attemptNumber;
+    expect(state.start(third), isFalse);
+    expect(third.attemptNumber, attempt);
+    expect(state.activeQuests.length, 2);
+    expect(
+      state.start(first),
+      isTrue,
+    ); // An explicit resume uses its existing slot.
+    state.stop(second);
+    expect(state.start(third), isTrue);
+    expect(state.activeQuests.length, 2);
+  });
+
+  testWidgets('opening a paused active quest keeps it paused until Resume', (
+    tester,
+  ) async {
+    final state = AppState();
+    addTearDown(state.dispose);
+    final q = state.quest(2);
+    state.start(q);
+    state.pauseTask(q);
+    final attempt = q.attemptNumber;
+    await tester.pumpWidget(MaterialApp(home: MainScreen(state: state)));
+    await tester.tap(find.text('Quests').last);
+    await tester.pumpAndSettle();
+    final card = find.byType(QuestRowCard).at(1);
+    await tester.ensureVisible(card);
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+    expect(q.attemptClock.isRunning, isFalse);
+    expect(q.attemptNumber, attempt);
+    expect(find.text('Resume timer'), findsOneWidget);
+    await tester.ensureVisible(find.text('Resume timer'));
+    await tester.tap(find.text('Resume timer'));
+    await tester.pump();
+    expect(q.attemptClock.isRunning, isTrue);
+  });
   test('stop discards attempt without XP or log and permits a fresh start', () {
     final state = AppState(demoData: true);
     addTearDown(state.dispose);

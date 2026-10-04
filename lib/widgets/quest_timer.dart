@@ -6,8 +6,9 @@ import '../models/quest.dart';
 import 'common.dart';
 
 class QuestTimer extends StatefulWidget {
-  const QuestTimer({super.key, required this.quest});
+  const QuestTimer({super.key, required this.quest, required this.onToggle});
   final Quest quest;
+  final VoidCallback onToggle;
   @override
   State<QuestTimer> createState() => _QuestTimerState();
 }
@@ -57,11 +58,7 @@ class _QuestTimerState extends State<QuestTimer> {
                 ),
               ),
               TextButton.icon(
-                onPressed: () => setState(() {
-                  q.attemptClock.isRunning
-                      ? q.attemptClock.stop()
-                      : q.attemptClock.start();
-                }),
+                onPressed: widget.onToggle,
                 icon: Icon(
                   q.attemptClock.isRunning ? Icons.pause : Icons.play_arrow,
                 ),

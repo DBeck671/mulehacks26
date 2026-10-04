@@ -28,7 +28,6 @@ class QuestDetailScreen extends StatelessWidget {
       return;
     }
     state.pauseTask(quest);
-    state.audio.play('tap');
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
     Navigator.pushReplacement<bool, bool>(
       context,
@@ -148,6 +147,7 @@ class QuestDetailScreen extends StatelessWidget {
                 QuestTimer(
                   key: ValueKey('timer-${quest.id}-${quest.attemptNumber}'),
                   quest: quest,
+                  onToggle: () => state.toggleTaskTimer(quest),
                 ),
               ],
               if (state.showcaseMode && quest.isActive) ...[
@@ -240,8 +240,10 @@ class QuestDetailScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () => state.start(quest),
-                    child: const Text('DO SIDEQUEST AGAIN'),
+                    onPressed: state.canStart(quest)
+                        ? () => state.start(quest)
+                        : null,
+                    child: const Text('START SIDEQUEST'),
                   ),
                 ),
               ] else ...[
@@ -263,12 +265,13 @@ class QuestDetailScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: quest.isActive && !quest.verification.isSatisfied
+                    onPressed:
+                        !state.canStart(quest) ||
+                            (quest.isActive && !quest.verification.isSatisfied)
                         ? null
                         : () async {
                             if (!quest.isActive) {
                               state.start(quest);
-                              state.audio.play('start');
                               return;
                             }
                             final result = state.complete(quest);
@@ -311,6 +314,15 @@ class QuestDetailScreen extends StatelessWidget {
                       quest.isActive ? 'COMPLETE SIDEQUEST' : 'START SIDEQUEST',
                     ),
                   ),
+                ),
+              ],
+              if (!quest.isActive &&
+                  !quest.isLocked &&
+                  !state.canStart(quest)) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Two quests are active. Complete or stop one to start another.',
+                  style: TextStyle(color: muted, fontSize: 12),
                 ),
               ],
               const SizedBox(height: 24),

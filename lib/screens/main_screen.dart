@@ -35,7 +35,6 @@ class _MainScreenState extends State<MainScreen>
   ).animate(CurvedAnimation(parent: navigationFade, curve: Curves.easeOut));
   void selectTab(int next) {
     if (next == tab) return;
-    widget.state.audio.play('tap');
     setState(() => tab = next);
     if (!MediaQuery.disableAnimationsOf(context)) {
       navigationFade.forward(from: 0);
@@ -399,10 +398,7 @@ class _QuestsScreenState extends State<QuestsScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: QuestRowCard(
                 quest: quest,
-                onTap: () {
-                  if (quest.isActive) widget.state.start(quest);
-                  widget.openQuest(quest);
-                },
+                onTap: () => widget.openQuest(quest),
               ),
             ),
           ),

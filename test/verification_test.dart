@@ -54,8 +54,8 @@ void main() {
           home: QuestDetailScreen(state: state, quest: q),
         ),
       );
-      await tester.ensureVisible(find.text('DO SIDEQUEST AGAIN'));
-      await tester.tap(find.text('DO SIDEQUEST AGAIN'));
+      await tester.ensureVisible(find.text('START SIDEQUEST'));
+      await tester.tap(find.text('START SIDEQUEST'));
       await tester.pumpAndSettle();
       expect(q.isActive, isTrue);
       expect(
