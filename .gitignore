@@ -49,3 +49,10 @@ app.*.map.json
 
 # Per-developer Firebase client configuration
 config/firebase.local.json
+
+# Server-only Gemini credential
+config/gemini.local.json
+.env
+.env.local
+
+server/.venv/

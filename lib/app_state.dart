@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'data/sample_quests.dart';
 import 'services/quest_audio.dart';
 import 'services/photo_verifier.dart';
-import 'services/firebase_photo_verifier.dart';
+import 'services/direct_gemini_photo_verifier.dart';
 import 'data/activity_store.dart';
 import 'models/quest.dart';
 import 'models/completed_activity.dart';
@@ -61,7 +61,7 @@ class AppState extends ChangeNotifier {
   AppState({
     Random? recommendationRandom,
     this.activityStore,
-    this.photoVerifier = const FirebasePhotoVerifier(),
+    this.photoVerifier = const DirectGeminiPhotoVerifier(),
     this.demoData = false,
     this.showcaseMode = false,
   }) : _recommendationRandom = recommendationRandom ?? Random() {
