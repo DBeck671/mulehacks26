@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../app_state.dart';
+import '../app_theme.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../services/club_service.dart';
 import '../data/activity_store.dart';
 import '../screens/onboarding.dart';
 import '../screens/main_screen.dart';
@@ -48,6 +53,12 @@ class _AccountSessionState extends State<_AccountSession> {
       result.dispose();
     } else {
       state = result;
+      if (widget.auth is FirebaseAuthService &&
+          (widget.auth as FirebaseAuthService).auth != null) {
+        result.connectClubs(
+          ClubService(FirebaseFirestore.instance, widget.auth.account!.uid),
+        );
+      }
     }
     return result;
   }
@@ -89,12 +100,19 @@ class _AccountSessionState extends State<_AccountSession> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        return Navigator(
-          onGenerateRoute: (_) => MaterialPageRoute(
-            builder: (_) =>
-                (!snapshot.data!.hasProfile || snapshot.data!.interests.isEmpty)
-                ? WelcomeScreen(state: snapshot.data!)
-                : MainScreen(state: snapshot.data!),
+        return ListenableBuilder(
+          listenable: snapshot.data!,
+          builder: (_, _) => Theme(
+            data: sideQuestTheme(snapshot.data!.lightTheme),
+            child: Navigator(
+              onGenerateRoute: (_) => MaterialPageRoute(
+                builder: (_) =>
+                    (!snapshot.data!.hasProfile ||
+                        snapshot.data!.interests.isEmpty)
+                    ? WelcomeScreen(state: snapshot.data!)
+                    : MainScreen(state: snapshot.data!),
+              ),
+            ),
           ),
         );
       },
@@ -151,7 +169,7 @@ class _AccountPanelState extends State<AccountPanel> {
           const SizedBox(height: 8),
           Text(
             account.verified ? 'Email verified' : 'Email not verified',
-            style: const TextStyle(color: muted, fontSize: 12),
+            style: TextStyle(color: context.palette.muted, fontSize: 12),
           ),
           if (!account.verified)
             Wrap(
@@ -174,7 +192,7 @@ class _AccountPanelState extends State<AccountPanel> {
               ],
             ),
           if (message != null)
-            Text(message!, style: const TextStyle(color: green)),
+            Text(message!, style: TextStyle(color: context.palette.green)),
           TextButton.icon(
             onPressed: busy ? null : () => run(widget.auth.signOut, null),
             icon: const Icon(Icons.logout, size: 18),

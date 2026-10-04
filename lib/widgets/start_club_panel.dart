@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app_state.dart';
+import '../models/group.dart';
 import 'common.dart';
 
 class StartClubPanel extends StatelessWidget {
@@ -19,9 +20,9 @@ class StartClubPanel extends StatelessWidget {
       ? FilledButton.icon(
           style: state.hasGroup
               ? FilledButton.styleFrom(
-                  backgroundColor: surface,
-                  foregroundColor: green,
-                  side: const BorderSide(color: raised),
+                  backgroundColor: context.palette.surface,
+                  foregroundColor: context.palette.green,
+                  side: BorderSide(color: context.palette.raised),
                 )
               : null,
           icon: const Icon(Icons.group_add_outlined),
@@ -37,7 +38,7 @@ class StartClubPanel extends StatelessWidget {
           },
         )
       : Panel(
-          color: green,
+          color: context.palette.green,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -46,9 +47,13 @@ class StartClubPanel extends StatelessWidget {
                 style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Name your crew, invite friends, and take on a shared task list.',
-                style: TextStyle(color: muted, fontSize: 12, height: 1.5),
+                style: TextStyle(
+                  color: context.palette.muted,
+                  fontSize: 12,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 14),
               SizedBox(
@@ -85,6 +90,7 @@ class _CreateClubSheetState extends State<_CreateClubSheet> {
   String? slotError;
   String? error;
   bool creating = false;
+  ClubVisibility visibility = ClubVisibility.public;
   @override
   void dispose() {
     name.dispose();
@@ -92,9 +98,9 @@ class _CreateClubSheetState extends State<_CreateClubSheet> {
     super.dispose();
   }
 
-  void create() {
+  Future<void> create() async {
     if (creating) return;
-    creating = true;
+    setState(() => creating = true);
     try {
       final count = int.tryParse(slots.text);
       if (count == null || count < 2 || count > 100) {
@@ -104,12 +110,19 @@ class _CreateClubSheetState extends State<_CreateClubSheet> {
         });
         return;
       }
-      widget.state.createClub(name.text, memberLimit: count);
-      Navigator.pop(context, true);
-    } on FormatException catch (e) {
+      await widget.state.createClubOnline(
+        name.text,
+        memberLimit: count,
+        visibility: visibility,
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         creating = false;
-        error = e.message;
+        error = e is FormatException
+            ? e.message
+            : 'Could not create club. Check your connection and retry.';
       });
     }
   }
@@ -128,7 +141,7 @@ class _CreateClubSheetState extends State<_CreateClubSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('YOUR CREW. YOUR ADVENTURE.', color: green),
+            Eyebrow('YOUR CREW. YOUR ADVENTURE.', color: context.palette.green),
             const SizedBox(height: 16),
             const Text(
               'Start a Club',
@@ -148,7 +161,9 @@ class _CreateClubSheetState extends State<_CreateClubSheet> {
               decoration: InputDecoration(
                 labelText: 'Club name',
                 hintText: 'Weekend explorers',
-                hintStyle: TextStyle(color: muted.withValues(alpha: .85)),
+                hintStyle: TextStyle(
+                  color: context.palette.muted.withValues(alpha: .85),
+                ),
                 errorText: error,
                 border: const OutlineInputBorder(),
               ),
@@ -172,21 +187,61 @@ class _CreateClubSheetState extends State<_CreateClubSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Your club gets an invite code and three party tasks. Invite friends by sharing or copying the code.',
-              style: TextStyle(color: muted, height: 1.5, fontSize: 12),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<ClubVisibility>(
+                segments: const [
+                  ButtonSegment(
+                    value: ClubVisibility.public,
+                    icon: Icon(Icons.public),
+                    label: Text('Public'),
+                  ),
+                  ButtonSegment(
+                    value: ClubVisibility.private,
+                    icon: Icon(Icons.lock_outline),
+                    label: Text('Private'),
+                  ),
+                ],
+                selected: {visibility},
+                showSelectedIcon: false,
+                onSelectionChanged: creating
+                    ? null
+                    : (v) => setState(() => visibility = v.first),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              visibility == ClubVisibility.public
+                  ? 'Anyone can discover and join.'
+                  : 'Join with an invite code or host approval.',
+              style: TextStyle(color: context.palette.muted, fontSize: 12),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Local demo: clubs and codes stay on this device. Online joining is not connected yet.',
-              style: TextStyle(color: muted, height: 1.5, fontSize: 11),
+            Text(
+              'Your club gets an invite code and three party tasks.',
+              style: TextStyle(
+                color: context.palette.muted,
+                height: 1.5,
+                fontSize: 12,
+              ),
             ),
+            const SizedBox(height: 12),
+            if (!widget.state.sharedClubs)
+              Text(
+                'Demo clubs · simulated members on this device.',
+                style: TextStyle(
+                  color: context.palette.muted,
+                  height: 1.5,
+                  fontSize: 11,
+                ),
+              ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: create,
-                child: const Text('CREATE CLUB'),
+                onPressed: creating ? null : create,
+                child: Text(creating ? 'CREATING…' : 'CREATE CLUB'),
               ),
             ),
             Center(

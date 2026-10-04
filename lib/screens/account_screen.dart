@@ -26,12 +26,12 @@ class AccountScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Gender: ${state.profileGender}',
-                  style: const TextStyle(color: muted),
+                  style: TextStyle(color: context.palette.muted),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   state.interests.map((c) => c.name).join(' · '),
-                  style: const TextStyle(color: muted),
+                  style: TextStyle(color: context.palette.muted),
                 ),
               ],
             ),

@@ -127,13 +127,17 @@ class _VerificationPanelState extends State<VerificationPanel> {
             const SizedBox(height: 12),
             Text(
               v.prompt,
-              style: const TextStyle(color: muted, fontSize: 13, height: 1.6),
+              style: TextStyle(
+                color: context.palette.muted,
+                fontSize: 13,
+                height: 1.6,
+              ),
             ),
             if (!editable && !q.isCompleted) ...[
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Start this SideQuest to add your evidence.',
-                style: TextStyle(color: muted, fontSize: 11),
+                style: TextStyle(color: context.palette.muted, fontSize: 11),
               ),
             ],
             if (v.method == VerificationMethod.location)
@@ -241,9 +245,13 @@ class _VerificationPanelState extends State<VerificationPanel> {
                     ),
                 ],
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Check photo sends this image to Google Gemini to assess its match. AI can make mistakes; it cannot prove when or who completed the task.',
-                  style: TextStyle(color: muted, fontSize: 11, height: 1.5),
+                  style: TextStyle(
+                    color: context.palette.muted,
+                    fontSize: 11,
+                    height: 1.5,
+                  ),
                 ),
               ],
             ],
@@ -290,7 +298,7 @@ class _VerificationPanelState extends State<VerificationPanel> {
                 v.method != VerificationMethod.location &&
                 v.method != VerificationMethod.photo) ...[
               const SizedBox(height: 12),
-              const Divider(color: raised),
+              Divider(color: context.palette.raised),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
@@ -299,9 +307,9 @@ class _VerificationPanelState extends State<VerificationPanel> {
                   'Use honor-based confirmation',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 ),
-                subtitle: const Text(
+                subtitle: Text(
                   'I completed this activity and prefer not to add evidence.',
-                  style: TextStyle(fontSize: 11, color: muted),
+                  style: TextStyle(fontSize: 11, color: context.palette.muted),
                 ),
                 value: v.honorConfirmed,
                 onChanged: (value) =>
@@ -314,7 +322,7 @@ class _VerificationPanelState extends State<VerificationPanel> {
                     : 'Add evidence or confirm on your honor to finish.',
                 style: TextStyle(
                   fontSize: 11,
-                  color: v.isSatisfied ? q.color : muted,
+                  color: v.isSatisfied ? q.color : context.palette.muted,
                 ),
               ),
             ],

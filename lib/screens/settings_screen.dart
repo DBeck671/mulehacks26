@@ -54,6 +54,21 @@ class SettingsScreen extends StatelessWidget {
             child: Material(
               type: MaterialType.transparency,
               child: SwitchListTile.adaptive(
+                activeTrackColor: context.palette.green,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Light theme'),
+                subtitle: const Text('Calm blues and white surfaces'),
+                value: state.lightTheme,
+                onChanged: state.setLightTheme,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Panel(
+            child: Material(
+              type: MaterialType.transparency,
+              child: SwitchListTile.adaptive(
+                activeTrackColor: context.palette.green,
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Show completed quests'),
                 subtitle: const Text(
@@ -69,6 +84,7 @@ class SettingsScreen extends StatelessWidget {
             child: Material(
               type: MaterialType.transparency,
               child: SwitchListTile.adaptive(
+                activeTrackColor: context.palette.green,
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Sound effects'),
                 value: state.audio.enabled,
@@ -85,9 +101,9 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
           ],
-          const Text(
+          Text(
             'Activity history is saved on this device for your account. Signing out keeps your saved log. Device storage is separate from other devices.',
-            style: TextStyle(color: muted, height: 1.6),
+            style: TextStyle(color: context.palette.muted, height: 1.6),
           ),
         ],
       ),

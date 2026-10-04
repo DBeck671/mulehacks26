@@ -30,10 +30,10 @@ class WeeklyGroupQuest extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 '+500 GROUP XP',
                 style: TextStyle(
-                  color: green,
+                  color: context.palette.green,
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                 ),
@@ -43,7 +43,11 @@ class WeeklyGroupQuest extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             "Complete ${club.weeklyChallengeGoal} SideQuests from less-explored categories together.",
-            style: const TextStyle(color: muted, fontSize: 12, height: 1.5),
+            style: TextStyle(
+              color: context.palette.muted,
+              fontSize: 12,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -57,7 +61,7 @@ class WeeklyGroupQuest extends StatelessWidget {
               const SizedBox(width: 14),
               Text(
                 '${club.weeklyChallengeProgress} / ${club.weeklyChallengeGoal}',
-                style: const TextStyle(color: muted, fontSize: 12),
+                style: TextStyle(color: context.palette.muted, fontSize: 12),
               ),
             ],
           ),

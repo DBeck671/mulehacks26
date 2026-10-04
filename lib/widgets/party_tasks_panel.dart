@@ -18,11 +18,14 @@ class PartyTasksPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final party = state.group;
     return Panel(
-      color: green,
+      color: context.palette.green,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Eyebrow('PARTY TASKS · ROUND ${party.partyRound}', color: green),
+          Eyebrow(
+            'PARTY TASKS · ROUND ${party.partyRound}',
+            color: context.palette.green,
+          ),
           const SizedBox(height: 12),
           Text(
             party.partyComplete
@@ -31,14 +34,21 @@ class PartyTasksPanel extends StatelessWidget {
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Work through your shared list. Each task needs one successful completion by a party member.',
-            style: TextStyle(color: muted, height: 1.5, fontSize: 12),
+            style: TextStyle(
+              color: context.palette.muted,
+              height: 1.5,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
             '${party.partyCompletedCount} / ${party.partyTasks.length} party tasks completed',
-            style: const TextStyle(color: green, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: context.palette.green,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 10),
           SmoothBar(
@@ -63,7 +73,9 @@ class PartyTasksPanel extends StatelessWidget {
                         task.isCompleted
                             ? Icons.check_circle
                             : Icons.radio_button_unchecked,
-                        color: task.isCompleted ? green : muted,
+                        color: task.isCompleted
+                            ? context.palette.green
+                            : context.palette.muted,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
@@ -80,8 +92,8 @@ class PartyTasksPanel extends StatelessWidget {
                     task.isCompleted
                         ? 'Completed by ${task.completedByName} · +${task.earnedXP} XP'
                         : '${q.duration} · +${q.rewardXP} XP · ${q.verification.method.label}',
-                    style: const TextStyle(
-                      color: muted,
+                    style: TextStyle(
+                      color: context.palette.muted,
                       fontSize: 11,
                       height: 1.5,
                     ),
@@ -106,7 +118,11 @@ class PartyTasksPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             state.showcaseMode ? 'Demo club · friends are simulated bots.' : 'Local demo: party progress stays on this device. Online member updates are not connected yet.',
-            style: TextStyle(color: muted, fontSize: 11, height: 1.5),
+            style: TextStyle(
+              color: context.palette.muted,
+              fontSize: 11,
+              height: 1.5,
+            ),
           ),
         ],
       ),

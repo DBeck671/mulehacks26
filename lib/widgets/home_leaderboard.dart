@@ -37,13 +37,17 @@ class HomeLeaderboard extends StatelessWidget {
                 onPressed: openFriends,
                 tooltip: 'Open clubs',
                 visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.groups_outlined, color: muted, size: 20),
+                icon: Icon(
+                  Icons.groups_outlined,
+                  color: context.palette.muted,
+                  size: 20,
+                ),
               ),
             ],
           ),
           Text(
             '${state.group.name} · Weekly XP',
-            style: const TextStyle(color: muted, fontSize: 11),
+            style: TextStyle(color: context.palette.muted, fontSize: 11),
           ),
           const SizedBox(height: 12),
           ...state.leaderboard.asMap().entries.map((entry) {
@@ -54,7 +58,9 @@ class HomeLeaderboard extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 4),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               decoration: BoxDecoration(
-                color: me ? green.withValues(alpha: .07) : Colors.transparent,
+                color: me
+                    ? context.palette.green.withValues(alpha: .07)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -64,7 +70,9 @@ class HomeLeaderboard extends StatelessWidget {
                     child: Text(
                       '${entry.key + 1}',
                       style: TextStyle(
-                        color: entry.key == 0 ? const Color(0xFFFFD166) : muted,
+                        color: entry.key == 0
+                            ? const Color(0xFFFFD166)
+                            : context.palette.muted,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
@@ -72,10 +80,15 @@ class HomeLeaderboard extends StatelessWidget {
                   ),
                   CircleAvatar(
                     radius: 12,
-                    backgroundColor: raised,
+                    backgroundColor: context.palette.raised,
                     child: Text(
                       f.avatarInitial,
-                      style: TextStyle(color: me ? green : muted, fontSize: 10),
+                      style: TextStyle(
+                        color: me
+                            ? context.palette.green
+                            : context.palette.muted,
+                        fontSize: 10,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -85,7 +98,9 @@ class HomeLeaderboard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: me ? green : Colors.white,
+                        color: me
+                            ? context.palette.green
+                            : context.palette.text,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -104,7 +119,9 @@ class HomeLeaderboard extends StatelessWidget {
                     builder: (_, xp, _) => Text(
                       '${xp.round()} XP',
                       style: TextStyle(
-                        color: me ? green : muted,
+                        color: me
+                            ? context.palette.green
+                            : context.palette.muted,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),

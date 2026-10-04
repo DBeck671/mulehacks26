@@ -24,16 +24,23 @@ class WelcomeScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(30),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Row(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.route_rounded, color: green),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Eyebrow(
+                        Icon(Icons.route_rounded, color: context.palette.green),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
                             'A little curiosity. A whole new path.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: context.palette.muted,
+                              fontSize: 11,
+                              letterSpacing: 1.8,
+                            ),
                           ),
                         ),
                       ],
@@ -47,26 +54,21 @@ class WelcomeScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     const Text(
                       'SIDEQUEST',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 44,
                         letterSpacing: -2,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Every experience\nleads somewhere.',
-                      style: TextStyle(
-                        fontSize: 32,
-                        height: 1.12,
-                        letterSpacing: -1,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
                     const SizedBox(height: 20),
-                    const Text(
+                    Text(
                       'Turn everyday activities into adventures, discover unexpected connections, and level up along the way.',
-                      style: TextStyle(color: muted, height: 1.7),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: context.palette.muted,
+                        height: 1.7,
+                      ),
                     ),
                     const SizedBox(height: 36),
                     SizedBox(
@@ -89,10 +91,13 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    const Center(
+                    Center(
                       child: Text(
                         'More living. Less scrolling.',
-                        style: TextStyle(color: muted, fontSize: 11),
+                        style: TextStyle(
+                          color: context.palette.muted,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],
@@ -116,8 +121,19 @@ class _JourneyArtState extends State<JourneyArt>
     with SingleTickerProviderStateMixin {
   late final controller = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 4),
-  )..repeat(reverse: true);
+    duration: const Duration(seconds: 3),
+  );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      controller.stop();
+      controller.value = .5;
+    } else if (!controller.isAnimating) {
+      controller.repeat();
+    }
+  }
+
   @override
   void dispose() {
     controller.dispose();
@@ -127,12 +143,15 @@ class _JourneyArtState extends State<JourneyArt>
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: controller,
-    builder: (_, _) => CustomPaint(painter: _JourneyPainter(controller.value)),
+    builder: (_, _) => CustomPaint(
+      painter: _JourneyPainter(controller.value, context.palette),
+    ),
   );
 }
 
 class _JourneyPainter extends CustomPainter {
-  _JourneyPainter(this.phase);
+  _JourneyPainter(this.phase, this.palette);
+  final AppPalette palette;
   final double phase;
   @override
   void paint(Canvas canvas, Size size) {
@@ -145,8 +164,8 @@ class _JourneyPainter extends CustomPainter {
       Offset(size.width * .88, size.height * .06),
     ];
     final colors = [
-      green,
-      green,
+      palette.green,
+      palette.green,
       Category.creativity.color,
       Category.exploration.color,
       Category.learning.color,
@@ -171,9 +190,7 @@ class _JourneyPainter extends CustomPainter {
           ..strokeWidth = 2,
       );
       final metric = path.computeMetrics().first;
-      final dot = metric.getTangentForOffset(
-        metric.length * (.2 + phase * .6),
-      )!;
+      final dot = metric.getTangentForOffset(metric.length * phase)!;
       canvas.drawCircle(dot.position, 3, Paint()..color = colors[edge[1]]);
     }
     for (var i = 0; i < points.length; i++) {
@@ -182,7 +199,7 @@ class _JourneyPainter extends CustomPainter {
         23 + sin(phase * pi) * 3,
         Paint()..color = colors[i].withValues(alpha: .07),
       );
-      canvas.drawCircle(points[i], 13, Paint()..color = background);
+      canvas.drawCircle(points[i], 13, Paint()..color = palette.background);
       canvas.drawCircle(
         points[i],
         13,
@@ -197,7 +214,7 @@ class _JourneyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _JourneyPainter oldDelegate) =>
-      oldDelegate.phase != phase;
+      oldDelegate.phase != phase || oldDelegate.palette.light != palette.light;
 }
 
 class InterestsScreen extends StatefulWidget {
@@ -225,7 +242,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
     body: SafeArea(
       child: PageBody(
         children: [
-          const Eyebrow('YOUR ADVENTURE STARTS HERE', color: green),
+          Eyebrow('YOUR ADVENTURE STARTS HERE', color: context.palette.green),
           const SizedBox(height: 20),
           const PageHeading(
             'Make it yours.',
@@ -248,7 +265,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Gender (optional)'),
             items:
-                const [
+                [
                       'Prefer not to say',
                       'Woman',
                       'Man',
@@ -264,9 +281,13 @@ class _InterestsScreenState extends State<InterestsScreen> {
                 setState(() => gender = value ?? 'Prefer not to say'),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Gender is optional.',
-            style: TextStyle(color: muted, fontSize: 12, height: 1.5),
+            style: TextStyle(
+              color: context.palette.muted,
+              fontSize: 12,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 26),
           const Text(
@@ -295,10 +316,12 @@ class _InterestsScreenState extends State<InterestsScreen> {
                       decoration: BoxDecoration(
                         color: selected.contains(c)
                             ? c.color.withValues(alpha: .09)
-                            : surface,
+                            : context.palette.surface,
                         borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                          color: selected.contains(c) ? c.color : raised,
+                          color: selected.contains(c)
+                              ? c.color
+                              : context.palette.raised,
                           width: 1.5,
                         ),
                         boxShadow: selected.contains(c)
@@ -343,7 +366,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
           const SizedBox(height: 26),
           Text(
             '${selected.length} interests selected',
-            style: const TextStyle(color: muted, fontSize: 12),
+            style: TextStyle(color: context.palette.muted, fontSize: 12),
           ),
           const SizedBox(height: 14),
           SizedBox(

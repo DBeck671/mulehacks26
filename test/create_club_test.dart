@@ -129,7 +129,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(shared!.text, contains(club.name));
       expect(shared!.text, contains(club.inviteCode));
-      expect(shared!.text, contains('online joining is not connected yet'));
+      expect(shared!.text, contains('Demo invite: on this device.'));
       expect(
         find.text('Sharing unavailable here. Copy the invite code instead.'),
         findsOneWidget,

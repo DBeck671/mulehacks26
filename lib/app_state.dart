@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' hide Category;
 
 import 'data/sample_quests.dart';
 import 'services/quest_audio.dart';
+import 'services/club_service.dart';
 import 'services/photo_verifier.dart';
 import 'services/direct_gemini_photo_verifier.dart';
 import 'data/activity_store.dart';
@@ -55,7 +56,14 @@ class CompletionResult {
 
 // One small ChangeNotifier owns the entire local demo. Screens only read it
 // and call these methods, so tab changes never reset gameplay progress.
-enum JoinGroupResult { joined, alreadyActive, invalidCode, unknownCode, full }
+enum JoinGroupResult {
+  requested,
+  joined,
+  alreadyActive,
+  invalidCode,
+  unknownCode,
+  full,
+}
 
 class AppState extends ChangeNotifier {
   AppState({
@@ -85,7 +93,9 @@ class AppState extends ChangeNotifier {
       Group(
         id: 2,
         name: 'Curiosity Club',
+        visibility: ClubVisibility.public,
         members: initialGroup.members
+            .where((f) => f.id != 0)
             .map(
               (f) => f.id == 0
                   ? you
@@ -103,6 +113,49 @@ class AppState extends ChangeNotifier {
       ),
     );
   }
+  void ensureDemoDiscovery() {
+    if (!demoData || groups.any((g) => g.id >= 100 && g.id < 1000)) return;
+    final random = Random();
+    const names = [
+      'Golden Hour Walkers',
+      'Tiny Adventures',
+      'The Creative Collective',
+      'City Wanderers',
+      'Sunday Reset',
+      'Trail Together',
+    ];
+    final catalog = names.toList()..shuffle(random);
+    const hosts = ['Mia', 'Noah', 'Ava', 'Leo', 'Zoe', 'Kai'];
+    const limits = [6, 4, 40, 80, 12, 24];
+    for (var i = 0; i < names.length; i++) {
+      final count = 1 + random.nextInt(limits[i] - 2);
+      final club = Group(
+        id: 100 + i,
+        name: catalog[i],
+        visibility: i.isEven ? ClubVisibility.public : ClubVisibility.private,
+        hostId: 10000 + i * 100,
+        memberLimit: limits[i],
+        groupCode: 'SQ-${9000 + i}',
+        inviteCode: 'INV-${9000 + i}',
+        weeklyChallengeProgress: 0,
+        members: List.generate(
+          count,
+          (j) => Friend(
+            id: 10000 + i * 100 + j,
+            name: j == 0
+                ? hosts[i]
+                : ['Ellis', 'Finn', 'Harper', 'Rowan', 'Sage', 'Quinn'][j % 6],
+            avatarInitial: j == 0 ? hosts[i][0] : 'F',
+            xp: random.nextInt(1800),
+            questsCompleted: random.nextInt(12),
+          ),
+        ),
+      );
+      _generatePartyTasks(club);
+      groups.add(club);
+    }
+  }
+
   PhotoVerifier photoVerifier;
   final bool demoData;
   late bool _seededProgress;
@@ -178,7 +231,7 @@ class AppState extends ChangeNotifier {
       hasGroup ? (_demoClubActivity[group.id] ?? []) : recentActivity;
 
   int _fillDemoFriends(Group club) {
-    if (!showcaseMode) return 0;
+    if (!showcaseMode || (club.id >= 100 && club.id <= 105)) return 0;
     var added = 0;
     const names = ['Alex', 'Jordan', 'Sam', 'Chris'];
     for (var i = 0; i < club.memberLimit - 1; i++) {
@@ -290,6 +343,7 @@ class AppState extends ChangeNotifier {
         ).toUpperCase();
       }
       state.audio.enabled = data['soundEnabled'] as bool? ?? showcaseMode;
+      state.lightTheme = data['lightTheme'] as bool? ?? false;
       state.showCompletedQuests = data['showCompletedQuests'] as bool? ?? true;
       state.completedActivities.addAll(
         (data['activities'] as List).map(
@@ -388,6 +442,7 @@ class AppState extends ChangeNotifier {
       'version': 1,
       'demoFreshStart': demoData && !hasSeededProgress,
       'soundEnabled': audio.enabled,
+      'lightTheme': lightTheme,
       'activities': completedActivities.map((e) => e.toJson()).toList(),
       'interests': interests.map((c) => c.name).toList(),
       'showCompletedQuests': showCompletedQuests,
@@ -466,6 +521,13 @@ class AppState extends ChangeNotifier {
   }
 
   void retryHistorySave() => _saveHistory();
+  bool lightTheme = false;
+  void setLightTheme(bool value) {
+    lightTheme = value;
+    _saveHistory();
+    notifyListeners();
+  }
+
   bool showCompletedQuests = true;
   int get tokensEarned =>
       completedActivities.fold(0, (sum, e) => sum + max(1, e.xp ~/ 25));
@@ -539,6 +601,8 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    if (_clubListener != null) clubService?.removeListener(_clubListener!);
+    clubService?.dispose();
     _botTimer?.cancel();
     for (final timer in _chatTimers) {
       timer.cancel();
@@ -549,6 +613,143 @@ class AppState extends ChangeNotifier {
       q.attemptClock.stop();
     }
     super.dispose();
+  }
+
+  ClubService? clubService;
+  VoidCallback? _clubListener;
+  bool get sharedClubs => clubService != null;
+  String? get clubConnectionError => clubService?.error;
+  bool get clubsLoading => clubService?.loading ?? false;
+  void connectClubs(ClubService service) {
+    clubService = service;
+    _clubListener = () {
+      if (_disposed) return;
+      groups
+        ..clear()
+        ..addAll(service.clubs);
+      joinedGroupIds
+        ..clear()
+        ..addAll(service.joinedIds);
+      if (!joinedGroupIds.contains(activeGroupId)) {
+        activeGroupId = joinedGroupIds.firstOrNull;
+      }
+      notifyListeners();
+    };
+    service.addListener(_clubListener!);
+    service.start();
+  }
+
+  List<Group> get discoverableClubs =>
+      groups.where((g) => !joinedGroupIds.contains(g.id)).toList();
+  Future<Group> createClubOnline(
+    String name, {
+    int memberLimit = 5,
+    ClubVisibility visibility = ClubVisibility.private,
+  }) async {
+    if (clubService == null) {
+      return createClub(name, memberLimit: memberLimit, visibility: visibility);
+    }
+    final club = await clubService!.create(
+      name,
+      memberLimit,
+      visibility,
+      you,
+      quests.where((q) => !q.isLocked).take(3).map((q) => q.id).toList(),
+    );
+    activeGroupId = club.id;
+    notifyListeners();
+    return club;
+  }
+
+  Future<JoinGroupResult> joinClub(Group club, {String? code}) async {
+    if (clubService != null) {
+      final result = await clubService!.join(club, you, code: code);
+      if (result == JoinGroupResult.joined ||
+          result == JoinGroupResult.alreadyActive) {
+        selectGroup(club.id);
+      }
+      return result;
+    }
+    if (joinedGroupIds.contains(club.id)) return JoinGroupResult.alreadyActive;
+    if (club.isFull && !club.members.any((f) => f.id == you.id)) {
+      return JoinGroupResult.full;
+    }
+    if (club.visibility == ClubVisibility.private && code == null) {
+      if (club.joinRequests.any(
+        (r) => r.uid == 'demo-you' && r.status == 'pending',
+      )) {
+        return JoinGroupResult.requested;
+      }
+      club.joinRequests.add(ClubJoinRequest('demo-you', you.name));
+      if (showcaseMode) {
+        late final Timer approval;
+        approval = Timer(const Duration(seconds: 4), () {
+          _chatTimers.remove(approval);
+          if (_disposed || club.isFull || !groups.contains(club)) return;
+          club.joinRequests.firstWhere((r) => r.uid == 'demo-you').status =
+              'approved';
+          joinGroup(club.groupCode);
+        });
+        _chatTimers.add(approval);
+      }
+      notifyListeners();
+      return JoinGroupResult.requested;
+    }
+    return joinGroup(code ?? club.groupCode);
+  }
+
+  Future<JoinGroupResult> joinCodeOnline(String code) async {
+    if (clubService == null) return joinGroup(code);
+    final result = await clubService!.joinCode(code, you);
+    final target = clubService!.lastJoinedId;
+    if (target != null &&
+        (result == JoinGroupResult.joined ||
+            result == JoinGroupResult.alreadyActive)) {
+      selectGroup(target);
+    }
+    return result;
+  }
+
+  Future<void> reviewClubRequest(
+    Group club,
+    ClubJoinRequest request,
+    bool approve,
+  ) async {
+    if (clubService != null) {
+      await clubService!.review(club, request, approve);
+      return;
+    }
+    if (club.hostId != you.id) {
+      throw const FormatException('Only the host can review requests.');
+    }
+    if (approve && club.isFull) {
+      throw const FormatException('This club is full.');
+    }
+    request.status = approve ? 'approved' : 'declined';
+    if (approve) {
+      club.members.add(
+        Friend(
+          id:
+              groups
+                  .expand((g) => g.members)
+                  .fold(100, (m, f) => max(m, f.id)) +
+              1,
+          name: request.name,
+          xp: 0,
+          avatarInitial: request.name.substring(0, 1),
+          questsCompleted: 0,
+        ),
+      );
+    }
+    notifyListeners();
+  }
+
+  Future<void> leaveClubOnline(Group club) async {
+    if (clubService != null) {
+      await clubService!.leave(club);
+    } else {
+      leaveGroup(groupId: club.id);
+    }
   }
 
   final List<Group> groups = [];
@@ -563,7 +764,11 @@ class AppState extends ChangeNotifier {
   List<int> get challengeContributions =>
       groupContributions.putIfAbsent(activeGroupId ?? 0, () => []);
 
-  Group createClub(String input, {int memberLimit = 5}) {
+  Group createClub(
+    String input, {
+    int memberLimit = 5,
+    ClubVisibility visibility = ClubVisibility.private,
+  }) {
     _validateMemberLimit(memberLimit);
     final name = input.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (name.length < 2 || name.length > 40) {
@@ -581,6 +786,7 @@ class AppState extends ChangeNotifier {
     final club = Group(
       id: groups.fold<int>(0, (highest, g) => max(highest, g.id)) + 1,
       name: name,
+      visibility: visibility,
       members: [you],
       groupCode: 'SQ-$suffix',
       inviteCode: 'INV-$suffix',
@@ -602,6 +808,21 @@ class AppState extends ChangeNotifier {
     if (limit < Group.minMemberLimit || limit > Group.maxMemberLimit) {
       throw const FormatException('Choose 2–100 member slots.');
     }
+  }
+
+  Future<void> setClubMemberLimitOnline(int groupId, int limit) async {
+    if (clubService == null) {
+      setClubMemberLimit(groupId, limit);
+      return;
+    }
+    _validateMemberLimit(limit);
+    final club = groups.firstWhere((g) => g.id == groupId);
+    if (limit < club.memberCount) {
+      throw const FormatException(
+        'Slots cannot be fewer than current members.',
+      );
+    }
+    await clubService!.resize(club, limit);
   }
 
   void setClubMemberLimit(int groupId, int limit) {
@@ -649,7 +870,7 @@ class AppState extends ChangeNotifier {
       if (found.isFull) return JoinGroupResult.full;
       found.members.add(you);
     }
-    _fillDemoFriends(found);
+    if (found.id < 100) _fillDemoFriends(found);
     if (found.partyTasks.isEmpty) _generatePartyTasks(found);
     final newlyJoined = joinedGroupIds.add(found.id);
     if (newlyJoined) audio.play('join');

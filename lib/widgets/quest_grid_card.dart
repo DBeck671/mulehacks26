@@ -14,7 +14,7 @@ class QuestGridCard extends StatelessWidget {
     label:
         '${quest.title}, ${quest.status}, ${quest.duration}, ${quest.rewardXP} XP, ${quest.verification.method.label}',
     child: Material(
-      color: surface,
+      color: context.palette.surface,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -26,7 +26,7 @@ class QuestGridCard extends StatelessWidget {
             border: Border.all(
               color: quest.isActive
                   ? quest.color
-                  : Colors.white.withValues(alpha: .08),
+                  : context.palette.text.withValues(alpha: .08),
             ),
           ),
           child: Column(
@@ -47,7 +47,7 @@ class QuestGridCard extends StatelessWidget {
                     style: TextStyle(
                       color: quest.isActive || quest.isNew
                           ? quest.color
-                          : muted,
+                          : context.palette.muted,
                       fontSize: 8,
                       fontWeight: FontWeight.w600,
                     ),
@@ -73,7 +73,10 @@ class QuestGridCard extends StatelessWidget {
                     child: Text(
                       quest.duration,
                       maxLines: 1,
-                      style: const TextStyle(color: muted, fontSize: 10),
+                      style: TextStyle(
+                        color: context.palette.muted,
+                        fontSize: 10,
+                      ),
                     ),
                   ),
                   Text(

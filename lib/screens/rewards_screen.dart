@@ -19,7 +19,7 @@ class RewardsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Eyebrow('DEMO REWARD', color: green),
+              Eyebrow('DEMO REWARD', color: context.palette.green),
               const SizedBox(height: 16),
               Text(
                 reward.title,
@@ -35,9 +35,13 @@ class RewardsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Sample code only. Not redeemable at a store. Real offers will be supplied by future partners.',
-                style: TextStyle(color: muted, fontSize: 12, height: 1.5),
+                style: TextStyle(
+                  color: context.palette.muted,
+                  fontSize: 12,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -75,9 +79,9 @@ class RewardsScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 15),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Sample reward only · not a usable coupon yet.',
-                style: TextStyle(color: muted, fontSize: 12),
+                style: TextStyle(color: context.palette.muted, fontSize: 12),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -134,9 +138,12 @@ class RewardsScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         'Earn tokens with verified quests.',
-                        style: TextStyle(color: muted, fontSize: 12),
+                        style: TextStyle(
+                          color: context.palette.muted,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -145,9 +152,13 @@ class RewardsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             '1 token per 25 XP earned, with at least 1 per completion. Repeat quests earn fewer XP and tokens.',
-            style: TextStyle(color: muted, fontSize: 11, height: 1.5),
+            style: TextStyle(
+              color: context.palette.muted,
+              fontSize: 11,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 26),
           const Eyebrow('PARTNER REWARDS · DEMO'),
@@ -180,8 +191,8 @@ class RewardsScreen extends StatelessWidget {
                               const SizedBox(height: 5),
                               Text(
                                 reward.partner,
-                                style: const TextStyle(
-                                  color: muted,
+                                style: TextStyle(
+                                  color: context.palette.muted,
                                   fontSize: 11,
                                 ),
                               ),
@@ -217,14 +228,14 @@ class RewardsScreen extends StatelessWidget {
               const Expanded(child: Eyebrow('YOUR BADGES')),
               Text(
                 '${state.equippedBadgeIds.length} / ${AppState.maxDisplayedBadges} displayed',
-                style: const TextStyle(color: muted, fontSize: 12),
+                style: TextStyle(color: context.palette.muted, fontSize: 12),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Choose up to three. Tap a selected badge to remove it.',
-            style: TextStyle(color: muted, fontSize: 12),
+            style: TextStyle(color: context.palette.muted, fontSize: 12),
           ),
           const SizedBox(height: 16),
           ...questBadges.map((badge) {
@@ -233,7 +244,7 @@ class RewardsScreen extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Material(
-                color: surface,
+                color: context.palette.surface,
                 borderRadius: BorderRadius.circular(18),
                 child: ListTile(
                   key: ValueKey('badge-choice-${badge.id}'),
@@ -257,7 +268,7 @@ class RewardsScreen extends StatelessWidget {
                       : null,
                   leading: Icon(
                     badge.icon,
-                    color: earned ? badge.color : muted,
+                    color: earned ? badge.color : context.palette.muted,
                   ),
                   title: earned
                       ? Align(
@@ -266,26 +277,39 @@ class RewardsScreen extends StatelessWidget {
                         )
                       : Text(
                           badge.title,
-                          style: const TextStyle(fontSize: 14, color: muted),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: context.palette.muted,
+                          ),
                         ),
                   subtitle: Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       badge.requirement,
-                      style: const TextStyle(color: muted, fontSize: 11),
+                      style: TextStyle(
+                        color: context.palette.muted,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                   trailing: equipped
-                      ? const Text(
+                      ? Text(
                           'Selected',
-                          style: TextStyle(color: green, fontSize: 11),
+                          style: TextStyle(
+                            color: context.palette.green,
+                            fontSize: 11,
+                          ),
                         )
                       : earned
-                      ? const Icon(Icons.add_rounded, size: 18, color: muted)
-                      : const Icon(
+                      ? Icon(
+                          Icons.add_rounded,
+                          size: 18,
+                          color: context.palette.muted,
+                        )
+                      : Icon(
                           Icons.lock_outline_rounded,
                           size: 17,
-                          color: muted,
+                          color: context.palette.muted,
                         ),
                 ),
               ),

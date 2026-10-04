@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../app_state.dart';
 import '../models/quest.dart';
+import '../models/group.dart';
 import '../widgets/common.dart';
 import '../widgets/party_tasks_panel.dart';
 import 'quest_detail_screen.dart';
@@ -50,6 +51,7 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
     if (state.showcaseMode) ...[
       const SizedBox(height: 16),
       SwitchListTile.adaptive(
+        activeTrackColor: context.palette.green,
         contentPadding: EdgeInsets.zero,
         title: const Text('Demo friends'),
         subtitle: Text(
@@ -73,6 +75,28 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
     ],
   ];
 
+  final Set<String> reviewing = {};
+  Future<void> review(ClubJoinRequest request, bool approve) async {
+    if (!reviewing.add(request.uid)) return;
+    try {
+      await state.reviewClubRequest(state.group, request, approve);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e is FormatException
+                  ? e.message
+                  : 'Could not review request. Please retry.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      reviewing.remove(request.uid);
+    }
+  }
+
   void editMemberSlots() {
     final club = state.group;
     showDialog<void>(
@@ -86,6 +110,36 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
   }
 
   List<Widget> members() => [
+    if (state.group.hostId == state.you.id) ...[
+      for (final request in state.group.joinRequests.where(
+        (r) => r.status == 'pending',
+      ))
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Panel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${request.name} wants to join'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    FilledButton(
+                      onPressed: () => review(request, true),
+                      child: const Text('APPROVE'),
+                    ),
+                    TextButton(
+                      onPressed: () => review(request, false),
+                      child: const Text('DECLINE'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+    ],
     if (state.group.hostId == state.you.id)
       Padding(
         padding: const EdgeInsets.only(bottom: 16),
@@ -102,7 +156,7 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
           padding: const EdgeInsets.all(8),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: raised,
+              backgroundColor: context.palette.raised,
               child: Text(f.avatarInitial),
             ),
             title: Column(
@@ -126,12 +180,15 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
             ),
             subtitle: Text(
               '${f.xp} XP · ${f.questsCompleted} quests',
-              style: const TextStyle(color: muted, fontSize: 12),
+              style: TextStyle(color: context.palette.muted, fontSize: 12),
             ),
             trailing: f.id == state.group.hostId
-                ? const Text(
+                ? Text(
                     'Host',
-                    style: TextStyle(color: green, fontSize: 12),
+                    style: TextStyle(
+                      color: context.palette.green,
+                      fontSize: 12,
+                    ),
                   )
                 : null,
           ),
@@ -144,10 +201,10 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
     const Eyebrow('RECENT ACTIVITY'),
     const SizedBox(height: 14),
     if (state.clubRecentActivity.isEmpty)
-      const Panel(
+      Panel(
         child: Text(
           'Completed team tasks will appear here.',
-          style: TextStyle(color: muted),
+          style: TextStyle(color: context.palette.muted),
         ),
       ),
     ...state.clubRecentActivity.map(
@@ -157,13 +214,17 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              const Icon(Icons.check_circle_outline, size: 18, color: green),
+              Icon(
+                Icons.check_circle_outline,
+                size: 18,
+                color: context.palette.green,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   text,
-                  style: const TextStyle(
-                    color: muted,
+                  style: TextStyle(
+                    color: context.palette.muted,
                     height: 1.5,
                     fontSize: 12,
                   ),
@@ -293,15 +354,21 @@ class _MemberSlotsDialogState extends State<_MemberSlotsDialog> {
         child: const Text('CANCEL'),
       ),
       FilledButton(
-        onPressed: () {
+        onPressed: () async {
           try {
-            widget.state.setClubMemberLimit(
+            await widget.state.setClubMemberLimitOnline(
               widget.groupId,
               int.tryParse(controller.text) ?? 0,
             );
-            Navigator.pop(context);
-          } on FormatException catch (e) {
-            setState(() => error = e.message);
+            if (context.mounted) Navigator.pop(context);
+          } catch (e) {
+            if (mounted) {
+              setState(
+                () => error = e is FormatException
+                    ? e.message
+                    : 'Could not save. Please retry.',
+              );
+            }
           }
         },
         child: const Text('SAVE'),

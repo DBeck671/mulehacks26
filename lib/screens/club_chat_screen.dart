@@ -41,15 +41,15 @@ class _ClubChatScreenState extends State<ClubChatScreen> {
                   widget.state.showcaseMode
                       ? 'Demo chat · bot replies'
                       : 'Local chat · on this device',
-                  style: const TextStyle(color: muted, fontSize: 11),
+                  style: TextStyle(color: context.palette.muted, fontSize: 11),
                 ),
               ),
               Expanded(
                 child: messages.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'Say hello to your team.',
-                          style: TextStyle(color: muted),
+                          style: TextStyle(color: context.palette.muted),
                         ),
                       )
                     : ListView.builder(
@@ -71,8 +71,10 @@ class _ClubChatScreenState extends State<ClubChatScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: message.isYou
-                                    ? green.withValues(alpha: .12)
-                                    : surface,
+                                    ? context.palette.green.withValues(
+                                        alpha: .12,
+                                      )
+                                    : context.palette.surface,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Column(
@@ -82,8 +84,8 @@ class _ClubChatScreenState extends State<ClubChatScreen> {
                                     message.isYou
                                         ? 'You'
                                         : '${message.sender}${message.isBot ? ' · bot' : ''}',
-                                    style: const TextStyle(
-                                      color: muted,
+                                    style: TextStyle(
+                                      color: context.palette.muted,
                                       fontSize: 11,
                                     ),
                                   ),
@@ -118,7 +120,7 @@ class _ClubChatScreenState extends State<ClubChatScreen> {
                               ? 'Message your team…'
                               : 'You left this club',
                           hintStyle: TextStyle(
-                            color: muted.withValues(alpha: .6),
+                            color: context.palette.muted.withValues(alpha: .6),
                           ),
                           counterText: '',
                         ),

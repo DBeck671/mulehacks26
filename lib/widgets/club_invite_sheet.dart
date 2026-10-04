@@ -29,7 +29,7 @@ class ClubInviteSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Eyebrow('INVITE YOUR CREW', color: green),
+            Eyebrow('INVITE YOUR CREW', color: context.palette.green),
             const SizedBox(height: 18),
             Text(
               club.name,
@@ -54,7 +54,7 @@ class ClubInviteSheet extends StatelessWidget {
                 ),
                 IconButton(
                   tooltip: 'Copy invite code',
-                  icon: const Icon(Icons.copy_rounded, color: green),
+                  icon: Icon(Icons.copy_rounded, color: context.palette.green),
                   onPressed: () async {
                     try {
                       await Clipboard.setData(
@@ -81,16 +81,22 @@ class ClubInviteSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Enter this invite code in the Join a group section.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: muted, height: 1.5),
+              style: TextStyle(color: context.palette.muted, height: 1.5),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Local demo: clubs and codes stay on this device. Online joining is not connected yet.',
+            Text(
+              club.cloudId == null
+                  ? 'Demo invite · on this device.'
+                  : 'Share this code with friends to join your club.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: muted, fontSize: 11, height: 1.5),
+              style: TextStyle(
+                color: context.palette.muted,
+                fontSize: 11,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 20),
             Builder(
@@ -103,7 +109,7 @@ class ClubInviteSheet extends StatelessWidget {
                     final result = await (shareInvite ?? SharePlus.instance.share)(
                       ShareParams(
                         text:
-                            'Join my SideQuest club "${club.name}"! Invite code: ${club.inviteCode}. Enter it in Friends → Join a group. Local demo: online joining is not connected yet.',
+                            'Join my SideQuest club "${club.name}"! Invite code: ${club.inviteCode}. Enter it in Friends → Join a group. ${club.cloudId == null ? "Demo invite: on this device." : ""}',
                         title: 'Join ${club.name}',
                         mailToFallbackEnabled: false,
                         sharePositionOrigin: box == null

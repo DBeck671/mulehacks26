@@ -31,7 +31,7 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
       key: const ValueKey('club-progress'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Eyebrow(club.name.toUpperCase(), color: green),
+        Eyebrow(club.name.toUpperCase(), color: context.palette.green),
         const SizedBox(height: 12),
         Text(
           club.isComplete ? 'Club task list complete!' : 'Keep going together',
@@ -40,7 +40,10 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
         const SizedBox(height: 10),
         Text(
           '${club.completedIds.length} / ${club.taskIds.length} club tasks completed',
-          style: const TextStyle(color: green, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: context.palette.green,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 12),
         SmoothBar(value: club.completedIds.length / club.taskIds.length),
@@ -49,7 +52,7 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
           club.isComplete
               ? 'Your shared list is complete.'
               : 'Choose an unfinished club task.',
-          style: const TextStyle(color: muted, height: 1.5),
+          style: TextStyle(color: context.palette.muted, height: 1.5),
         ),
         const SizedBox(height: 20),
         ...club.taskIds.map((id) {
@@ -67,7 +70,9 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                         done
                             ? Icons.check_circle
                             : Icons.radio_button_unchecked,
-                        color: done ? green : muted,
+                        color: done
+                            ? context.palette.green
+                            : context.palette.muted,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
@@ -82,7 +87,10 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                   const SizedBox(height: 8),
                   Text(
                     done ? 'Completed' : '${q.duration} · +${q.rewardXP} XP',
-                    style: const TextStyle(color: muted, fontSize: 12),
+                    style: TextStyle(
+                      color: context.palette.muted,
+                      fontSize: 12,
+                    ),
                   ),
                   if (!done)
                     TextButton(
@@ -150,7 +158,12 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                     : progress,
               ),
               const SizedBox(height: 18),
-              const Center(child: Eyebrow('SIDEQUEST COMPLETE', color: green)),
+              Center(
+                child: Eyebrow(
+                  'SIDEQUEST COMPLETE',
+                  color: context.palette.green,
+                ),
+              ),
               const SizedBox(height: 14),
               Text(
                 result.quest.title,
@@ -180,10 +193,10 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              const Center(
+              Center(
                 child: Text(
                   'Added to your Activity Log',
-                  style: TextStyle(color: muted, fontSize: 12),
+                  style: TextStyle(color: context.palette.muted, fontSize: 12),
                 ),
               ),
               const SizedBox(height: 20),
@@ -196,8 +209,8 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                 const SizedBox(height: 12),
                 Text(
                   'LEVEL UP · LEVEL ${displayedXP ~/ 1000 + 1}',
-                  style: const TextStyle(
-                    color: green,
+                  style: TextStyle(
+                    color: context.palette.green,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -238,9 +251,12 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 10),
-                                const Text(
+                                Text(
                                   'Choose your next adventure.',
-                                  style: TextStyle(color: muted, height: 1.5),
+                                  style: TextStyle(
+                                    color: context.palette.muted,
+                                    height: 1.5,
+                                  ),
                                 ),
                                 const SizedBox(height: 20),
                                 ...suggestions.map(
@@ -270,11 +286,11 @@ class _QuestCompleteScreenState extends State<QuestCompleteScreen> {
                                 ),
                               ],
                             )
-                    : const Center(
-                        key: ValueKey('earning-xp'),
+                    : Center(
+                        key: const ValueKey('earning-xp'),
                         child: Text(
                           'Adding your XP…',
-                          style: TextStyle(color: muted),
+                          style: TextStyle(color: context.palette.muted),
                         ),
                       ),
               ),

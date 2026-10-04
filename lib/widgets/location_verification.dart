@@ -174,8 +174,8 @@ class _LocationVerificationState extends State<LocationVerification>
               : v.locationVerified
               ? 'VERIFICATION PASSED'
               : 'GPS TRACKING ${v.startLocation == null ? 'READY' : 'PAUSED'}',
-          style: const TextStyle(
-            color: green,
+          style: TextStyle(
+            color: context.palette.green,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
@@ -192,7 +192,7 @@ class _LocationVerificationState extends State<LocationVerification>
             padding: const EdgeInsets.only(top: 10),
             child: Text(
               'GPS accuracy: ±${v.lastRouteReading!.accuracy.round()} m',
-              style: const TextStyle(color: muted, fontSize: 11),
+              style: TextStyle(color: context.palette.muted, fontSize: 11),
             ),
           ),
         if (v.routeSignalMessage != null)
@@ -200,7 +200,7 @@ class _LocationVerificationState extends State<LocationVerification>
             padding: const EdgeInsets.only(top: 12),
             child: Text(
               v.routeSignalMessage!,
-              style: const TextStyle(color: muted, height: 1.5),
+              style: TextStyle(color: context.palette.muted, height: 1.5),
             ),
           ),
         if (v.locationFailed)
@@ -271,13 +271,21 @@ class _LocationVerificationState extends State<LocationVerification>
             padding: const EdgeInsets.only(top: 12),
             child: Text(
               message!,
-              style: const TextStyle(color: muted, fontSize: 12, height: 1.5),
+              style: TextStyle(
+                color: context.palette.muted,
+                fontSize: 12,
+                height: 1.5,
+              ),
             ),
           ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Keep this task open. Tracking pauses when you leave; movement while paused does not count.',
-          style: TextStyle(color: muted, fontSize: 11, height: 1.5),
+          style: TextStyle(
+            color: context.palette.muted,
+            fontSize: 11,
+            height: 1.5,
+          ),
         ),
       ],
     );
@@ -354,7 +362,9 @@ class _LocationVerificationState extends State<LocationVerification>
               v.startLocation == null
                   ? Icons.radio_button_unchecked
                   : Icons.check_circle_outline,
-              color: v.startLocation == null ? muted : green,
+              color: v.startLocation == null
+                  ? context.palette.muted
+                  : context.palette.green,
               size: 18,
             ),
             const SizedBox(width: 8),
@@ -373,7 +383,9 @@ class _LocationVerificationState extends State<LocationVerification>
           Text(
             '${v.verifiedDistance.floor()} / ${v.minimumDistance.round()} m verified displacement',
             style: TextStyle(
-              color: v.locationVerified ? green : muted,
+              color: v.locationVerified
+                  ? context.palette.green
+                  : context.palette.muted,
               fontSize: 12,
             ),
           ),
@@ -382,7 +394,11 @@ class _LocationVerificationState extends State<LocationVerification>
           const SizedBox(height: 8),
           Text(
             'Straight-line distance: ${v.displacement.floor()} m. Accuracy margin deducted.',
-            style: const TextStyle(color: muted, fontSize: 10, height: 1.5),
+            style: TextStyle(
+              color: context.palette.muted,
+              fontSize: 10,
+              height: 1.5,
+            ),
           ),
         ],
         if (v.locationFailed) ...[
@@ -402,9 +418,12 @@ class _LocationVerificationState extends State<LocationVerification>
           ),
         ] else if (v.locationVerified) ...[
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'VERIFICATION PASSED',
-            style: TextStyle(color: green, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: context.palette.green,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
         if (editable) ...[
@@ -462,8 +481,8 @@ class _LocationVerificationState extends State<LocationVerification>
                 liveRegion: true,
                 child: Text(
                   message!,
-                  style: const TextStyle(
-                    color: muted,
+                  style: TextStyle(
+                    color: context.palette.muted,
                     fontSize: 12,
                     height: 1.5,
                   ),
@@ -472,9 +491,13 @@ class _LocationVerificationState extends State<LocationVerification>
             ),
         ],
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Location is read only when you tap a check-in. Two points stay local for this session; no route or background tracking. This verifies displacement, not walking time or transport method.',
-          style: TextStyle(color: muted, fontSize: 11, height: 1.5),
+          style: TextStyle(
+            color: context.palette.muted,
+            fontSize: 11,
+            height: 1.5,
+          ),
         ),
       ],
     );

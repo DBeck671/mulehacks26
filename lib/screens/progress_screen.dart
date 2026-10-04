@@ -24,13 +24,16 @@ class _ProgressScreenState extends State<ProgressScreen> {
       children: [
         const PageHeading('Your Journey', ''),
         Panel(
-          color: green,
+          color: context.palette.green,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.auto_awesome_rounded, color: green),
+                  Icon(
+                    Icons.auto_awesome_rounded,
+                    color: context.palette.green,
+                  ),
                   const SizedBox(width: 12),
                   Text(
                     'Level ${state.level}',

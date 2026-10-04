@@ -1,6 +1,14 @@
 import 'friend.dart';
 import 'party_task.dart';
 
+enum ClubVisibility { public, private }
+
+class ClubJoinRequest {
+  ClubJoinRequest(this.uid, this.name, {this.status = 'pending'});
+  final String uid, name;
+  String status;
+}
+
 class Group {
   Group({
     required this.id,
@@ -12,14 +20,25 @@ class Group {
     this.inviteCode = 'INV-4821',
     this.hostId = 1,
     this.memberLimit = 5,
+    this.visibility = ClubVisibility.private,
+    this.cloudId,
+    this.hostUid,
+    this.directoryMemberCount,
   });
-  final int id, weeklyChallengeGoal, hostId;
-  final String name, groupCode, inviteCode;
+  final int id, weeklyChallengeGoal;
+  int hostId;
+  final ClubVisibility visibility;
+  final String? cloudId, hostUid;
+  int? directoryMemberCount;
+  final List<ClubJoinRequest> joinRequests = [];
+  int get memberCount => directoryMemberCount ?? members.length;
+  final String name;
+  String groupCode, inviteCode;
   final List<Friend> members;
   static const minMemberLimit = 2;
   static const maxMemberLimit = 100;
   int memberLimit;
-  bool get isFull => members.length >= memberLimit;
+  bool get isFull => memberCount >= memberLimit;
   int weeklyChallengeProgress;
   int partyRound = 0;
   final List<PartyTask> partyTasks = [];

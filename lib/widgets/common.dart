@@ -9,6 +9,28 @@ const raised = Color(0xFF202631);
 const green = Color(0xFF6EEB83);
 const muted = Color(0xFF929BAB);
 
+class AppPalette {
+  const AppPalette(this.light);
+  final bool light;
+  Color get background =>
+      light ? const Color(0xFFF3F7FC) : const Color(0xFF0F1117);
+  Color get surface => light ? Colors.white : const Color(0xFF181C24);
+  Color get raised => light ? const Color(0xFFE3ECF6) : const Color(0xFF202631);
+  Color get green => light ? const Color(0xFF286AA9) : const Color(0xFF6EEB83);
+  Color get muted => light ? const Color(0xFF60748B) : const Color(0xFF929BAB);
+  Color get text => light ? const Color(0xFF1D354F) : const Color(0xFFF3F5F0);
+  Color resolve(Color color) {
+    if (color == const Color(0xFF6EEB83)) return green;
+    if (color == const Color(0xFF929BAB)) return muted;
+    return color;
+  }
+}
+
+extension SideQuestColors on BuildContext {
+  AppPalette get palette =>
+      AppPalette(Theme.of(this).brightness == Brightness.light);
+}
+
 class Panel extends StatelessWidget {
   const Panel({
     super.key,
@@ -23,12 +45,14 @@ class Panel extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: padding,
     decoration: BoxDecoration(
-      color: surface,
+      color: context.palette.surface,
       borderRadius: BorderRadius.circular(24),
       border: Border.all(
-        color: (color ?? Colors.white).withValues(
-          alpha: color == null ? .07 : .3,
-        ),
+        color:
+            (color == null
+                    ? context.palette.text
+                    : context.palette.resolve(color!))
+                .withValues(alpha: color == null ? .07 : .3),
       ),
     ),
     child: child,
@@ -46,7 +70,7 @@ class Eyebrow extends StatelessWidget {
       fontSize: 11,
       letterSpacing: 1.8,
       fontWeight: FontWeight.w700,
-      color: color,
+      color: context.palette.resolve(color),
     ),
   );
 }
@@ -83,7 +107,10 @@ class PageHeading extends StatelessWidget {
         Text(title, style: Theme.of(context).textTheme.headlineLarge),
         if (subtitle.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text(subtitle, style: const TextStyle(color: muted, height: 1.5)),
+          Text(
+            subtitle,
+            style: TextStyle(color: context.palette.muted, height: 1.5),
+          ),
         ],
       ],
     ),
@@ -109,7 +136,7 @@ class XPBar extends StatelessWidget {
           const Spacer(),
           Text(
             '${totalXP % 1000} / 1000 XP',
-            style: const TextStyle(color: muted, fontSize: 12),
+            style: TextStyle(color: context.palette.muted, fontSize: 12),
           ),
         ],
       ),
@@ -129,13 +156,13 @@ class SmoothBar extends StatelessWidget {
   final double value;
   final Color color;
   final bool animate;
-  Widget bar(double progress) => ClipRRect(
+  Widget bar(BuildContext context, double progress) => ClipRRect(
     borderRadius: BorderRadius.circular(10),
     child: LinearProgressIndicator(
       value: progress,
       minHeight: 7,
-      color: color,
-      backgroundColor: raised,
+      color: context.palette.resolve(color),
+      backgroundColor: context.palette.raised,
     ),
   );
   @override
@@ -144,9 +171,9 @@ class SmoothBar extends StatelessWidget {
           tween: Tween(end: value.clamp(0, 1)),
           duration: const Duration(milliseconds: 850),
           curve: Curves.easeOutCubic,
-          builder: (_, progress, _) => bar(progress),
+          builder: (_, progress, _) => bar(context, progress),
         )
-      : bar(value.clamp(0, 1));
+      : bar(context, value.clamp(0, 1));
 }
 
 class CategoryBadges extends StatelessWidget {
@@ -199,9 +226,13 @@ class CategoryFilters extends StatelessWidget {
                 label: Text(c?.label ?? 'All'),
                 selected: selected == c,
                 onSelected: (_) => onSelect(c),
-                selectedColor: (c?.color ?? green).withValues(alpha: .2),
+                selectedColor: (c?.color ?? context.palette.green).withValues(
+                  alpha: .2,
+                ),
                 labelStyle: TextStyle(
-                  color: selected == c ? c?.color ?? green : muted,
+                  color: selected == c
+                      ? c?.color ?? context.palette.green
+                      : context.palette.muted,
                 ),
                 showCheckmark: false,
               ),
@@ -261,10 +292,13 @@ class QuestCard extends StatelessWidget {
                         quest.status,
                         color: quest.isNew || quest.isActive
                             ? quest.color
-                            : muted,
+                            : context.palette.muted,
                       )
                     else
-                      const Icon(Icons.north_east_rounded, color: muted),
+                      Icon(
+                        Icons.north_east_rounded,
+                        color: context.palette.muted,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -282,8 +316,8 @@ class QuestCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   quest.description,
-                  style: const TextStyle(
-                    color: muted,
+                  style: TextStyle(
+                    color: context.palette.muted,
                     height: 1.6,
                     fontSize: 13,
                   ),
@@ -296,30 +330,36 @@ class QuestCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.schedule_rounded,
                           size: 14,
-                          color: muted,
+                          color: context.palette.muted,
                         ),
                         const SizedBox(width: 5),
                         Text(
                           quest.duration,
-                          style: const TextStyle(color: muted, fontSize: 12),
+                          style: TextStyle(
+                            color: context.palette.muted,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.signal_cellular_alt_rounded,
                           size: 14,
-                          color: muted,
+                          color: context.palette.muted,
                         ),
                         const SizedBox(width: 5),
                         Text(
                           quest.difficulty,
-                          style: const TextStyle(color: muted, fontSize: 12),
+                          style: TextStyle(
+                            color: context.palette.muted,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -338,14 +378,17 @@ class QuestCard extends StatelessWidget {
                   children: [
                     Icon(
                       quest.verification.method.icon,
-                      color: muted,
+                      color: context.palette.muted,
                       size: 14,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         quest.verification.method.label,
-                        style: const TextStyle(color: muted, fontSize: 11),
+                        style: TextStyle(
+                          color: context.palette.muted,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],
@@ -397,7 +440,11 @@ class StatStrip extends StatelessWidget {
             Text(
               labels[i],
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 10, color: muted, height: 1.5),
+              style: TextStyle(
+                fontSize: 10,
+                color: context.palette.muted,
+                height: 1.5,
+              ),
             ),
           ],
         ),

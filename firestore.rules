@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function club(id) { return get(/databases/$(database)/documents/clubs/$(id)).data; }
+    function afterClub(id) { return getAfter(/databases/$(database)/documents/clubs/$(id)).data; }
+    function host(id) { return signedIn() && club(id).hostUid == request.auth.uid; }
+    function member(id) { return signedIn() && request.auth.uid in club(id).memberIds; }
+    function validClub(d) {
+      return d.keys().hasOnly(['name','visibility','hostUid','memberIds','memberLimit','questIds','createdAt'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 40
+        && d.visibility in ['public','private'] && d.hostUid is string
+        && d.memberLimit is int && d.memberLimit >= 2 && d.memberLimit <= 100
+        && d.memberIds is list && d.memberIds.size() <= d.memberLimit
+        && d.memberIds.toSet().size() == d.memberIds.size()
+        && d.questIds is list && d.questIds.size() == 3 && d.createdAt is timestamp;
+    }
+    function validInvite(id) {
+      return getAfter(/databases/$(database)/documents/clubs/$(id)/requests/$(request.auth.uid)).data.code
+        == get(/databases/$(database)/documents/clubs/$(id)/private/config).data.inviteCode;
+    }
+    match /clubs/{id} {
+      // Only basic directory metadata is shared. No emails or invite codes.
+      allow read: if signedIn();
+      allow create: if signedIn() && validClub(request.resource.data)
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid]
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedIn() && validClub(request.resource.data) && (
+        // Host edits and approvals cannot replace the club creator arbitrarily.
+        (host(id) && request.resource.data.hostUid == resource.data.hostUid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','visibility','memberLimit','memberIds']))
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds','hostUid'])
+          && !(request.auth.uid in resource.data.memberIds)
+          && request.resource.data.memberIds == resource.data.memberIds.concat([request.auth.uid])
+          && request.resource.data.hostUid == (resource.data.memberIds.size() == 0 ? request.auth.uid : resource.data.hostUid)
+          && (resource.data.visibility == 'public' || validInvite(id)))
+        || (request.auth.uid in resource.data.memberIds
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds','hostUid'])
+          && request.resource.data.memberIds == resource.data.memberIds.removeAll([request.auth.uid])
+          && request.resource.data.hostUid == (resource.data.hostUid == request.auth.uid && request.resource.data.memberIds.size() > 0
+            ? request.resource.data.memberIds[0] : resource.data.hostUid))
+      );
+      allow delete: if false;
+      match /private/{doc} {
+        allow read: if member(id);
+        allow create: if signedIn() && doc == 'config' && afterClub(id).hostUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['inviteCode'])
+          && request.resource.data.inviteCode.matches('SQ-[A-Z2-9]{12}');
+        allow update, delete: if false;
+      }
+      match /members/{uid} {
+        allow read: if member(id);
+        allow create, update: if signedIn()
+          && uid in afterClub(id).memberIds
+          && (uid == request.auth.uid || host(id))
+          && request.resource.data.keys().hasOnly(['name','xp','questsCompleted'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 60
+          && request.resource.data.xp is int && request.resource.data.xp >= 0
+          && request.resource.data.questsCompleted is int && request.resource.data.questsCompleted >= 0;
+        allow delete: if signedIn() && request.auth.uid == uid && !(uid in afterClub(id).memberIds);
+      }
+      match /requests/{uid} {
+        allow get: if signedIn() && (uid == request.auth.uid || host(id));
+        allow list: if host(id);
+        allow create, update: if signedIn() && (
+          (uid == request.auth.uid && !(uid in club(id).memberIds)
+            && request.resource.data.keys().hasOnly(['name','status','code'])
+            && request.resource.data.name is string && request.resource.data.name.size() <= 60
+            && request.resource.data.status == 'pending'
+            && (request.resource.data.code == '' || request.resource.data.code == get(/databases/$(database)/documents/clubs/$(id)/private/config).data.inviteCode))
+          || (host(id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','code'])
+            && request.resource.data.status in ['approved','declined'] && request.resource.data.code == '')
+        );
+        allow delete: if false;
+      }
+    }
+    match /clubCodes/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['clubId'])
+        && afterClub(request.resource.data.clubId).hostUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)/private/config).data.inviteCode == code;
+      allow update, delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

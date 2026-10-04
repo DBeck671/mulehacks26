@@ -94,9 +94,13 @@ class _AuthScreenState extends State<AuthScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.route_rounded, color: green, size: 38),
+                    Icon(
+                      Icons.route_rounded,
+                      color: context.palette.green,
+                      size: 38,
+                    ),
                     const SizedBox(height: 24),
-                    const Eyebrow('SIDEQUEST', color: green),
+                    Eyebrow('SIDEQUEST', color: context.palette.green),
                     const SizedBox(height: 12),
                     Text(
                       create ? 'Your adventure\nstarts here.' : 'Welcome back.',
@@ -107,7 +111,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       create
                           ? 'Create an account and take your first step.'
                           : 'Log in to find your next SideQuest.',
-                      style: const TextStyle(color: muted),
+                      style: TextStyle(color: context.palette.muted),
                     ),
                     const SizedBox(height: 30),
                     if (!widget.auth.available) ...[
@@ -194,7 +198,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       Text(
                         message!,
                         semanticsLabel: message,
-                        style: const TextStyle(color: green),
+                        style: TextStyle(color: context.palette.green),
                       ),
                     ],
                     const SizedBox(height: 26),
@@ -245,9 +249,13 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'Your activity is saved for this account on this device.',
-                      style: TextStyle(color: muted, fontSize: 11, height: 1.5),
+                      style: TextStyle(
+                        color: context.palette.muted,
+                        fontSize: 11,
+                        height: 1.5,
+                      ),
                     ),
                   ],
                 ),

@@ -22,19 +22,41 @@ class _JoinGroupPanelState extends State<JoinGroupPanel> {
     super.dispose();
   }
 
-  void join() {
-    final result = widget.state.joinGroup(code.text);
+  bool busy = false;
+  Future<void> join() async {
+    if (busy) return;
+    setState(() => busy = true);
+    JoinGroupResult result;
+    try {
+      result = await widget.state.joinCodeOnline(code.text);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          busy = false;
+          isError = true;
+          message =
+              'Could not join. Check the code and connection, then retry.';
+        });
+      }
+      return;
+    }
+    if (!mounted) return;
     setState(() {
+      busy = false;
       isError =
           result == JoinGroupResult.invalidCode ||
           result == JoinGroupResult.unknownCode ||
           result == JoinGroupResult.full;
       message = switch (result) {
+        JoinGroupResult.requested => 'Request sent to the host.',
         JoinGroupResult.joined =>
           'Joined ${widget.state.group.name}! Your XP comes with you.',
         JoinGroupResult.alreadyActive =>
           'You are already in ${widget.state.group.name}.',
-        JoinGroupResult.invalidCode => 'Enter a code like SQ-7319 or INV-7319.',
+        JoinGroupResult.invalidCode =>
+          widget.state.sharedClubs
+              ? 'Enter the full SQ invite code.'
+              : 'Enter a code like SQ-7319 or INV-7319.',
         JoinGroupResult.unknownCode =>
           'Code not found. Check it and try again.',
         JoinGroupResult.full =>
@@ -56,11 +78,11 @@ class _JoinGroupPanelState extends State<JoinGroupPanel> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(Icons.group_add_outlined, color: green),
-            SizedBox(width: 10),
-            Expanded(
+            Icon(Icons.group_add_outlined, color: context.palette.green),
+            const SizedBox(width: 10),
+            const Expanded(
               child: Text(
                 'Join a group',
                 style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
@@ -69,9 +91,13 @@ class _JoinGroupPanelState extends State<JoinGroupPanel> {
           ],
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Got an invite? Enter an invite code or group code to find your crew.',
-          style: TextStyle(color: muted, fontSize: 12, height: 1.6),
+          style: TextStyle(
+            color: context.palette.muted,
+            fontSize: 12,
+            height: 1.6,
+          ),
         ),
         const SizedBox(height: 18),
         TextField(
@@ -97,7 +123,10 @@ class _JoinGroupPanelState extends State<JoinGroupPanel> {
         const SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
-          child: FilledButton(onPressed: join, child: const Text('JOIN GROUP')),
+          child: FilledButton(
+            onPressed: busy ? null : join,
+            child: Text(busy ? 'JOINING…' : 'JOIN GROUP'),
+          ),
         ),
         if (message != null) ...[
           const SizedBox(height: 14),
@@ -106,7 +135,9 @@ class _JoinGroupPanelState extends State<JoinGroupPanel> {
             child: Text(
               message!,
               style: TextStyle(
-                color: isError ? const Color(0xFFFF6B8A) : green,
+                color: isError
+                    ? const Color(0xFFFF6B8A)
+                    : context.palette.green,
                 fontSize: 12,
                 height: 1.5,
               ),
@@ -114,10 +145,15 @@ class _JoinGroupPanelState extends State<JoinGroupPanel> {
           ),
         ],
         const SizedBox(height: 12),
-        const Text(
-          'Local demo · Try SQ-7319 or INV-7319 for Curiosity Club.',
-          style: TextStyle(color: muted, fontSize: 10, height: 1.5),
-        ),
+        if (!widget.state.sharedClubs)
+          Text(
+            'Demo · Try SQ-7319 for Curiosity Club.',
+            style: TextStyle(
+              color: context.palette.muted,
+              fontSize: 10,
+              height: 1.5,
+            ),
+          ),
       ],
     ),
   );

@@ -27,7 +27,7 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
   final camera = TransformationController();
   late final pulse = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2800),
+    duration: const Duration(seconds: 3),
   );
   bool positioned = false, reducedMotion = false;
   String activeSignature = '';
@@ -186,11 +186,12 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                                 radius: 1.1,
                                 colors: [
                                   Color.alphaBlend(
-                                    (active.firstOrNull?.color ?? green)
+                                    (active.firstOrNull?.color ??
+                                            context.palette.green)
                                         .withValues(alpha: .055),
-                                    background,
+                                    context.palette.background,
                                   ),
-                                  background,
+                                  context.palette.background,
                                 ],
                               ),
                             ),
@@ -237,6 +238,8 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                                   Positioned.fill(
                                     child: CustomPaint(
                                       painter: _BranchPainter(
+                                        accent: context.palette.green,
+                                        dustColor: context.palette.text,
                                         positions: positions,
                                         activeIds: activeIds,
                                         colors: {
@@ -264,13 +267,16 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                             ),
                           ),
                         ),
-                        const Positioned(
+                        Positioned(
                           left: 20,
                           bottom: 16,
                           child: IgnorePointer(
                             child: Text(
                               'Drag to explore · Pinch to zoom',
-                              style: TextStyle(color: muted, fontSize: 11),
+                              style: TextStyle(
+                                color: context.palette.muted,
+                                fontSize: 11,
+                              ),
                             ),
                           ),
                         ),
@@ -286,9 +292,11 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                   vertical: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: surface,
+                  color: context.palette.surface,
                   border: Border(
-                    top: BorderSide(color: green.withValues(alpha: .12)),
+                    top: BorderSide(
+                      color: context.palette.green.withValues(alpha: .12),
+                    ),
                   ),
                 ),
                 child: Column(
@@ -297,9 +305,12 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                     const Eyebrow('ACTIVE QUESTS'),
                     if (active.isEmpty) ...[
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'No active quests',
-                        style: TextStyle(color: muted, fontSize: 13),
+                        style: TextStyle(
+                          color: context.palette.muted,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                     for (final quest in active)
@@ -347,8 +358,8 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                                     quest.description,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: muted,
+                                    style: TextStyle(
+                                      color: context.palette.muted,
                                       fontSize: 12,
                                       height: 1.4,
                                     ),
@@ -443,7 +454,7 @@ class _QuestOrb extends StatelessWidget {
                           quest.color.withValues(
                             alpha: quest.isLocked ? .04 : .13,
                           ),
-                          surface,
+                          context.palette.surface,
                         ),
                       ),
                       child: CustomPaint(
@@ -467,14 +478,14 @@ class _QuestOrb extends StatelessWidget {
                         bottom: 9,
                         child: Container(
                           padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(
-                            color: surface,
+                          decoration: BoxDecoration(
+                            color: context.palette.surface,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.lock_outline_rounded,
                             size: 11,
-                            color: muted,
+                            color: context.palette.muted,
                           ),
                         ),
                       ),
@@ -495,8 +506,8 @@ class _QuestOrb extends StatelessWidget {
                 height: 1.2,
                 fontWeight: quest.isActive ? FontWeight.w700 : FontWeight.w500,
                 color: related
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: .72),
+                    ? context.palette.text
+                    : context.palette.text.withValues(alpha: .72),
               ),
             ),
           ),
@@ -521,7 +532,7 @@ class _QuestOrb extends StatelessWidget {
             status,
             style: TextStyle(
               fontSize: 9,
-              color: quest.isLocked ? muted : quest.color,
+              color: quest.isLocked ? context.palette.muted : quest.color,
             ),
           ),
         ],
@@ -573,7 +584,10 @@ class _BranchPainter extends CustomPainter {
     required this.colors,
     required this.pulse,
     required this.reducedMotion,
+    required this.accent,
+    required this.dustColor,
   }) : super(repaint: pulse);
+  final Color accent, dustColor;
   final Map<int, Rect> positions;
   final Set<int> activeIds;
   final Map<int, Color> colors;
@@ -581,7 +595,7 @@ class _BranchPainter extends CustomPainter {
   final bool reducedMotion;
   @override
   void paint(Canvas canvas, Size size) {
-    final dust = Paint()..color = Colors.white.withValues(alpha: .035);
+    final dust = Paint()..color = dustColor.withValues(alpha: .035);
     for (double x = 24; x < size.width; x += 40) {
       for (double y = 24; y < size.height; y += 40) {
         canvas.drawCircle(Offset(x, y), .8, dust);
@@ -620,7 +634,7 @@ class _BranchPainter extends CustomPainter {
           );
         }
         final active = activeIds.contains(child) || activeIds.contains(parent);
-        final color = colors[child] ?? green;
+        final color = colors[child] ?? accent;
         if (active) {
           canvas.drawPath(
             path,
@@ -646,9 +660,7 @@ class _BranchPainter extends CustomPainter {
         if (active && !reducedMotion) {
           final metric = path.computeMetrics().first;
           final point = metric
-              .getTangentForOffset(
-                metric.length * ((pulse.value + child * .13) % 1),
-              )!
+              .getTangentForOffset(metric.length * pulse.value)!
               .position;
           canvas.drawCircle(
             point,

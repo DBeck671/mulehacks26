@@ -43,20 +43,24 @@ class ActivityLogScreen extends StatelessWidget {
             ),
           ),
         if (state.completedActivities.isEmpty)
-          const Panel(
+          Panel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.task_alt_rounded, color: green, size: 32),
-                SizedBox(height: 16),
-                Text(
+                Icon(
+                  Icons.task_alt_rounded,
+                  color: context.palette.green,
+                  size: 32,
+                ),
+                const SizedBox(height: 16),
+                const Text(
                   'Your first adventure starts with a choice.',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
                   'Choose a task from Home or Quests. Once completed, it will appear here, including every repeat.',
-                  style: TextStyle(color: muted, height: 1.6),
+                  style: TextStyle(color: context.palette.muted, height: 1.6),
                 ),
               ],
             ),
@@ -64,7 +68,10 @@ class ActivityLogScreen extends StatelessWidget {
         else ...[
           Text(
             '${state.completedActivities.length} completions · ${stacks.length} unique tasks · +${state.earnedXP} XP earned',
-            style: const TextStyle(color: green, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: context.palette.green,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 20),
           ...stacks.values.map((attempts) {
@@ -111,17 +118,26 @@ class ActivityLogScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       'Last completed $time',
-                      style: const TextStyle(color: muted, fontSize: 12),
+                      style: TextStyle(
+                        color: context.palette.muted,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Completed ${attempts.length} ${attempts.length == 1 ? 'time' : 'times'}',
-                      style: const TextStyle(color: muted, fontSize: 11),
+                      style: TextStyle(
+                        color: context.palette.muted,
+                        fontSize: 11,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Latest verification: ${entry.verificationMethod}',
-                      style: const TextStyle(color: muted, fontSize: 11),
+                      style: TextStyle(
+                        color: context.palette.muted,
+                        fontSize: 11,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextButton(

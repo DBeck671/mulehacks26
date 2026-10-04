@@ -74,7 +74,7 @@ class _QuestTimerState extends State<QuestTimer> {
                 : reached
                 ? 'Estimated time reached · ${clock(elapsed)} elapsed'
                 : '${clock(elapsed)} elapsed · estimated time remaining',
-            style: const TextStyle(color: muted, fontSize: 12),
+            style: TextStyle(color: context.palette.muted, fontSize: 12),
           ),
           if (target != null) ...[
             const SizedBox(height: 12),
@@ -87,9 +87,13 @@ class _QuestTimerState extends State<QuestTimer> {
             ),
           ],
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Time is an estimate. Verification is required. Timer and GPS pause separately.',
-            style: TextStyle(color: muted, fontSize: 11, height: 1.5),
+            style: TextStyle(
+              color: context.palette.muted,
+              fontSize: 11,
+              height: 1.5,
+            ),
           ),
         ],
       ),

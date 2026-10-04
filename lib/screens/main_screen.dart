@@ -72,7 +72,7 @@ class _MainScreenState extends State<MainScreen>
                 ),
                 subtitle: Text(
                   auth?.account?.email ?? 'Local preview',
-                  style: const TextStyle(color: muted),
+                  style: TextStyle(color: context.palette.muted),
                 ),
               ),
               ListTile(
@@ -159,8 +159,11 @@ class _MainScreenState extends State<MainScreen>
             icon: const Icon(Icons.account_circle_outlined, size: 22),
           ),
           if (widget.state.showcaseMode) ...[
-            const Center(
-              child: Text('DEMO', style: TextStyle(color: muted, fontSize: 10)),
+            Center(
+              child: Text(
+                'DEMO',
+                style: TextStyle(color: context.palette.muted, fontSize: 10),
+              ),
             ),
             IconButton(
               tooltip: widget.state.audio.enabled
@@ -177,12 +180,12 @@ class _MainScreenState extends State<MainScreen>
             ),
           ],
         ],
-        title: const Text(
+        title: Text(
           'SideQuest',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: green,
+            color: context.palette.green,
           ),
         ),
       ),
@@ -224,30 +227,45 @@ class _MainScreenState extends State<MainScreen>
         selectedIndex: tab,
         onDestinationSelected: selectTab,
         height: 76,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined, color: muted),
-            selectedIcon: Icon(Icons.home_rounded, color: green),
+            icon: Icon(Icons.home_outlined, color: context.palette.muted),
+            selectedIcon: Icon(
+              Icons.home_rounded,
+              color: context.palette.green,
+            ),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.explore_outlined, color: muted),
-            selectedIcon: Icon(Icons.explore_rounded, color: green),
+            icon: Icon(Icons.explore_outlined, color: context.palette.muted),
+            selectedIcon: Icon(
+              Icons.explore_rounded,
+              color: context.palette.green,
+            ),
             label: 'Quests',
           ),
           NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined, color: muted),
-            selectedIcon: Icon(Icons.bar_chart_rounded, color: green),
+            icon: Icon(Icons.bar_chart_outlined, color: context.palette.muted),
+            selectedIcon: Icon(
+              Icons.bar_chart_rounded,
+              color: context.palette.green,
+            ),
             label: 'Progress',
           ),
           NavigationDestination(
-            icon: Icon(Icons.history_rounded, color: muted),
-            selectedIcon: Icon(Icons.history_rounded, color: green),
+            icon: Icon(Icons.history_rounded, color: context.palette.muted),
+            selectedIcon: Icon(
+              Icons.history_rounded,
+              color: context.palette.green,
+            ),
             label: 'Activity Log',
           ),
           NavigationDestination(
-            icon: Icon(Icons.groups_outlined, color: muted),
-            selectedIcon: Icon(Icons.groups_rounded, color: green),
+            icon: Icon(Icons.groups_outlined, color: context.palette.muted),
+            selectedIcon: Icon(
+              Icons.groups_rounded,
+              color: context.palette.green,
+            ),
             label: 'Friends',
           ),
         ],
@@ -274,7 +292,7 @@ class HomeScreen extends StatelessWidget {
         style: Theme.of(context).textTheme.headlineLarge,
       ),
       const SizedBox(height: 12),
-      const Text('', style: TextStyle(color: muted, fontSize: 13)),
+      Text('', style: TextStyle(color: context.palette.muted, fontSize: 13)),
       const SizedBox(height: 26),
       XPBar(totalXP: state.totalXP),
       const SizedBox(height: 32),
@@ -370,7 +388,7 @@ class _QuestsScreenState extends State<QuestsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: surface,
+                color: context.palette.surface,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: DropdownButton<Category?>(
@@ -403,10 +421,10 @@ class _QuestsScreenState extends State<QuestsScreen> {
             ),
           const SizedBox(height: 18),
           if (activeOnly && quests.isEmpty)
-            const Panel(
+            Panel(
               child: Text(
                 'No active sidequests. Choose one in Explore.',
-                style: TextStyle(color: muted),
+                style: TextStyle(color: context.palette.muted),
               ),
             ),
           ...quests.map(

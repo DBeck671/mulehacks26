@@ -131,7 +131,11 @@ class QuestDetailScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 quest.description,
-                style: const TextStyle(color: muted, height: 1.7, fontSize: 16),
+                style: TextStyle(
+                  color: context.palette.muted,
+                  height: 1.7,
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: 22),
               Panel(
@@ -168,10 +172,10 @@ class QuestDetailScreen extends StatelessWidget {
               ],
               const SizedBox(height: 28),
               if (state.showcaseMode && quest.verification.demoVerified)
-                const Panel(
+                Panel(
                   child: Text(
                     'Demo simulation · ready to complete',
-                    style: TextStyle(color: green),
+                    style: TextStyle(color: context.palette.green),
                   ),
                 )
               else
@@ -196,9 +200,9 @@ class QuestDetailScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 const Eyebrow('LOCKED'),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Complete these activities to open this path:',
-                  style: TextStyle(color: muted),
+                  style: TextStyle(color: context.palette.muted),
                 ),
                 const SizedBox(height: 12),
                 ...(questParents[quest.id] ?? []).map(
@@ -210,7 +214,9 @@ class QuestDetailScreen extends StatelessWidget {
                           state.quest(id).isCompleted
                               ? Icons.check_circle
                               : Icons.radio_button_unchecked,
-                          color: state.quest(id).isCompleted ? green : muted,
+                          color: state.quest(id).isCompleted
+                              ? context.palette.green
+                              : context.palette.muted,
                           size: 20,
                         ),
                         const SizedBox(width: 10),
@@ -256,8 +262,8 @@ class QuestDetailScreen extends StatelessWidget {
                 if (!quest.isActive && state.active != null) ...[
                   Text(
                     'Your other quest stays in Active: ${state.active!.title}.',
-                    style: const TextStyle(
-                      color: muted,
+                    style: TextStyle(
+                      color: context.palette.muted,
                       height: 1.5,
                       fontSize: 12,
                     ),
@@ -323,9 +329,9 @@ class QuestDetailScreen extends StatelessWidget {
                   !quest.isLocked &&
                   !state.canStart(quest)) ...[
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Two quests are active. Complete or stop one to start another.',
-                  style: TextStyle(color: muted, fontSize: 12),
+                  style: TextStyle(color: context.palette.muted, fontSize: 12),
                 ),
               ],
               const SizedBox(height: 24),

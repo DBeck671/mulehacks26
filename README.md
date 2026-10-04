@@ -51,7 +51,7 @@ flutter test
 flutter build web
 ```
 
-No contacts or background tracking is used. Walks and outdoor movement offer live GPS route tracking while the task is open. Place-to-place quests use start/finish location check-ins. Camera access is requested only when you choose Take photo. Group invitations support local demo codes; online joining is intentionally a future feature. AI-generated quests can use the existing Quest model later, with API calls behind a server rather than credentials embedded in Flutter.
+No contacts or background tracking is used. Walks and outdoor movement offer live GPS route tracking while the task is open. Place-to-place quests use start/finish location check-ins. Camera access is requested only when you choose Take photo. Signed-in club discovery and membership use Firestore; showcase invitations use local demo codes. AI-generated quests can use the existing Quest model later, with API calls behind a server rather than credentials embedded in Flutter.
 
 ## Quest verification
 
@@ -68,7 +68,7 @@ Completion is disabled until the assigned evidence is supplied, or, for reflecti
 
 Friends includes a **Join a group** section accepting either an invite code or group code. Try `SQ-7319` or `INV-7319` to join Curiosity Club. Use `SQ-4821` or `INV-4821` for Weekend Warriors. Codes accept lowercase, optional hyphens, and spaces. Empty, malformed, unknown, and current-group codes get clear feedback. Joined groups appear as stacked clickable club cards, and Invite Friend shows and copies the invite code. Leave Group removes your membership and switches to another joined group, or shows the join section when none remain. XP and quest history remain intact.
 
-Joining switches the active group without changing XP, quest progress, or verification evidence. Both demo crews include the same sample friends and the same player. Challenge progress and contribution counts are separate for each group. This works locally within the demo session; codes do not connect to another device or server.
+Joining switches the active group without changing XP, quest progress, or verification evidence. Both demo crews include sample friends; joining adds the current player to the selected club. Challenge progress and contribution counts are separate for each group. This works locally within the demo session; codes do not connect to another device or server.
 
 ## Location verification
 
@@ -90,7 +90,7 @@ Party membership, task lists, and contributions currently stay in local memory. 
 
 Friends offers **Start a Club** even when you are not in a group. Choose a name (2–40 characters); you become the host of a new club with one member, a fresh party board, and a unique `INV-####` code. The invite sheet opens immediately. **Copy invite code** puts the code on the clipboard; **Share Invite** opens the platform sharing UI where supported, with a copy fallback message when unavailable. Sharing only happens when the user chooses a recipient in that UI.
 
-Leaving preserves the club and party progress. Enter its invite code to rejoin within the current demo session. Newly created clubs start at zero weekly challenge progress. Codes and club membership do not yet synchronize across devices or survive app restarts; an online backend is required for remote friends to join and contribute.
+Leaving preserves the club and party progress. Enter its invite code to rejoin within the current demo session. Newly created clubs start at zero weekly challenge progress. Signed-in club membership and invite codes now synchronize through Firestore. Demo clubs remain session-local. Shared task completion and chat are still local prototypes.
 
 The share action uses [share_plus](https://pub.dev/packages/share_plus). Native share sheets require a physical-device smoke test.
 
@@ -134,7 +134,7 @@ First-time account setup asks for a name/nickname, optional gender (including Pr
 
 The embedded desktop browser can report Firebase network failures even when Chrome reaches the backend. Use the authenticated app in regular Chrome for live account testing. A phone-sized browser viewport does not emulate phone GPS. Web GPS requests a high-accuracy position directly with a bounded timeout rather than using the plugin's unbounded permission request.
 
-Normal authenticated accounts start at Level 1 with zero XP, zero completed tasks/connections/achievements, no club memberships and no sample friends. Only the explicit `demoData: true` preview/test fixtures seed example progress. Saved Firebase-UID-scoped completion records restore only that account's earned XP; synthetic baseline XP is never added to real accounts. Profile and history currently persist on this device, not across devices. Clubs remain a local prototype and do not yet synchronize between real accounts.
+Normal authenticated accounts start at Level 1 with zero XP, zero completed tasks/connections/achievements, no club memberships and no sample friends. Only the explicit `demoData: true` preview/test fixtures seed example progress. Saved Firebase-UID-scoped completion records restore only that account's earned XP; synthetic baseline XP is never added to real accounts. Profile and history currently persist on this device, not across devices. Club discovery, rosters, invite codes and join approvals synchronize between real accounts through Firestore; task completion/chat remain local prototypes.
 
 Completing a club/party task shows XP first, then the fixed shared task list and completed count. Only unfinished tasks from the same club round can be continued; these preserve party credit. The last completion celebrates the list rather than suggesting new tasks or automatically generating a new round. Return to Club takes users back to Club Activity. Solo tasks still show randomized recommendations.
 
@@ -236,3 +236,26 @@ The gateway calls `gemini-3.5-flash`, overridable with the server's `GEMINI_MODE
 ### Public deployment
 
 This gateway is deliberately **local demo only**. For an actual phone/public link, deploy the Flutter web build and an HTTPS backend; set `--dart-define=PHOTO_REVIEW_URL=https://YOUR_BACKEND/api/photo-review`. Before exposing the backend, add Firebase ID-token verification, server-side canonical quest lookup, per-user limits and explicit allowed origins. Store `GEMINI_API_KEY` in the hosting provider's secret store. The loopback gateway must not be publicly exposed or tunneled as-is. Firebase Authentication authorized domains also need the deployed web domain. Public deployment and native distribution are not configured by this local setup.
+
+## Club discovery and appearance
+
+Friends → **My clubs / Discover** separates membership from browsing. New clubs can be public (instant joining) or private (invite code or host approval). Hosts review requests from Club Activity → Members. Capacity is enforced in a Firestore transaction, and leaving as host transfers ownership to the next member. Private club names and capacities are discoverable; rosters and invite secrets are restricted to members, and requests to the applicant/host. Names, rosters and membership are shared; XP/history and existing group task/chat simulation remain device-local. The initial discovery query is limited to 100 clubs.
+
+The `sidequest-7c7e0` default Firestore database was created on Spark in `nam5`, and `firestore.rules` published. Rules deny anonymous access and all unrelated collections. No Gemini or admin credential is needed for clubs. Rules can be republished using `firebase deploy --only firestore:rules --project sidequest-7c7e0` after Firebase CLI sign-in.
+
+The isolated showcase adds six fictional clubs with random occupancy, capacities from 4–80, and a public/private mix. These never write to Firestore or enter real accounts. Private bot hosts approve demo join requests after four seconds; public demo clubs join immediately. Resetting the demo clears your memberships while the discovery directory can populate again when Friends opens.
+
+Settings → **Light theme** selects white surfaces and calm blue accents, keeping the same layout. The preference persists in each account's existing local store. Welcome content is centered; journey and activity-tree blips travel origin→destination once every three seconds and respect reduced motion.
+
+### Club access-rule checks
+
+With Node.js and Java installed:
+
+```sh
+cd tools/firestore-tests
+pnpm install
+cd ../..
+tools/firestore-tests/node_modules/.bin/firebase emulators:exec --only firestore --project demo-sidequest-clubs 'node tools/firestore-tests/clubs.test.mjs'
+```
+
+The emulator checks public joining, private codes/approval, capacity, unauthorized edits, private roster/secret access, leaving and host transfer. It never contacts the production database.

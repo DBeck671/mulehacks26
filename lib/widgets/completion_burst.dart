@@ -12,11 +12,15 @@ class CompletionBurst extends StatelessWidget {
     height: 112,
     width: double.infinity,
     child: CustomPaint(
-      painter: _BurstPainter(progress),
+      painter: _BurstPainter(progress, context.palette.green),
       child: Center(
         child: Transform.scale(
           scale: .7 + .3 * Curves.easeOutBack.transform(min(1, progress * 4)),
-          child: const Icon(Icons.check_circle_rounded, color: green, size: 64),
+          child: Icon(
+            Icons.check_circle_rounded,
+            color: context.palette.green,
+            size: 64,
+          ),
         ),
       ),
     ),
@@ -24,7 +28,8 @@ class CompletionBurst extends StatelessWidget {
 }
 
 class _BurstPainter extends CustomPainter {
-  _BurstPainter(this.progress);
+  _BurstPainter(this.progress, this.accent);
+  final Color accent;
   final double progress;
   @override
   void paint(Canvas canvas, Size size) {
@@ -39,7 +44,7 @@ class _BurstPainter extends CustomPainter {
         position,
         (i % 3 + 2) * (1 - p),
         Paint()
-          ..color = (i.isEven ? green : const Color(0xFFFFD590)).withValues(
+          ..color = (i.isEven ? accent : const Color(0xFFFFD590)).withValues(
             alpha: 1 - p,
           ),
       );

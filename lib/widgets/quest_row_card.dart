@@ -11,7 +11,7 @@ class QuestRowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: surface,
+    color: context.palette.surface,
     borderRadius: BorderRadius.circular(18),
     child: InkWell(
       onTap: onTap,
@@ -49,7 +49,10 @@ class QuestRowCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     '${quest.duration} · ${quest.verification.method.label}',
-                    style: const TextStyle(color: muted, fontSize: 11),
+                    style: TextStyle(
+                      color: context.palette.muted,
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -57,7 +60,9 @@ class QuestRowCard extends StatelessWidget {
                         ? '${quest.attemptClock.isRunning ? 'In progress' : 'Paused'} · ${quest.attemptClock.elapsed.inMinutes}:${(quest.attemptClock.elapsed.inSeconds % 60).toString().padLeft(2, '0')} · ${quest.verification.isSatisfied ? 'Ready to complete' : 'Needs verification'}'
                         : quest.status,
                     style: TextStyle(
-                      color: quest.isActive ? quest.color : muted,
+                      color: quest.isActive
+                          ? quest.color
+                          : context.palette.muted,
                       fontSize: 10,
                     ),
                   ),
@@ -76,7 +81,11 @@ class QuestRowCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Icon(Icons.chevron_right_rounded, color: muted, size: 18),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: context.palette.muted,
+                  size: 18,
+                ),
               ],
             ),
           ],

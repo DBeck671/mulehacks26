@@ -99,12 +99,14 @@ class _ClubWelcomeState extends State<_ClubWelcome>
           liveRegion: true,
           label: 'Joined ${widget.clubName}',
           child: Material(
-            color: surface,
+            color: context.palette.surface,
             elevation: 16,
             shadowColor: Colors.black54,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(22),
-              side: BorderSide(color: green.withValues(alpha: .25)),
+              side: BorderSide(
+                color: context.palette.green.withValues(alpha: .25),
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
@@ -114,12 +116,12 @@ class _ClubWelcomeState extends State<_ClubWelcome>
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: green.withValues(alpha: .12),
+                      color: context.palette.green.withValues(alpha: .12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.groups_rounded,
-                      color: green,
+                      color: context.palette.green,
                       size: 24,
                     ),
                   ),
@@ -141,7 +143,10 @@ class _ClubWelcomeState extends State<_ClubWelcome>
                           widget.clubName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: muted, fontSize: 12),
+                          style: TextStyle(
+                            color: context.palette.muted,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -149,9 +154,9 @@ class _ClubWelcomeState extends State<_ClubWelcome>
                   IconButton(
                     tooltip: 'Dismiss welcome',
                     onPressed: dismiss,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: muted,
+                      color: context.palette.muted,
                       size: 17,
                     ),
                   ),

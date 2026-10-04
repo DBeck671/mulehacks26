@@ -11,10 +11,159 @@ import '../models/quest.dart';
 import '../models/group.dart';
 import '../widgets/club_welcome.dart';
 
-class FriendsScreen extends StatelessWidget {
+enum _FriendsView { clubs, discover }
+
+class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key, required this.state, this.openQuest});
   final AppState state;
   final ValueChanged<Quest>? openQuest;
+  @override
+  State<FriendsScreen> createState() => _FriendsScreenState();
+}
+
+class _FriendsScreenState extends State<FriendsScreen> {
+  AppState get state => widget.state;
+  ValueChanged<Quest>? get openQuest => widget.openQuest;
+  @override
+  void initState() {
+    super.initState();
+    state.ensureDemoDiscovery();
+    state.addListener(onClubChange);
+  }
+
+  _FriendsView view = _FriendsView.clubs;
+  final Set<int> pendingApprovals = {};
+  void onClubChange() {
+    final approved = state.joinedGroups
+        .where((c) => pendingApprovals.contains(c.id))
+        .firstOrNull;
+    if (approved == null) return;
+    pendingApprovals.remove(approved.id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => view = _FriendsView.clubs);
+      if (state.sharedClubs) state.audio.play('join');
+      showClubWelcome(context, approved.name);
+    });
+  }
+
+  @override
+  void dispose() {
+    state.removeListener(onClubChange);
+    super.dispose();
+  }
+
+  String search = '';
+  final Set<int> busyClubs = {};
+
+  Future<void> joinDiscovered(Group club) async {
+    setState(() => busyClubs.add(club.id));
+    try {
+      final result = await state.joinClub(club);
+      if (!mounted) return;
+      if (result == JoinGroupResult.joined) {
+        state.selectGroup(club.id);
+        setState(() => view = _FriendsView.clubs);
+        showClubWelcome(context, club.name);
+      } else {
+        if (result == JoinGroupResult.requested) pendingApprovals.add(club.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(switch (result) {
+              JoinGroupResult.requested => 'Request sent to ${club.name}.',
+              JoinGroupResult.full => 'This club is full.',
+              JoinGroupResult.alreadyActive => 'You are already a member.',
+              _ => 'Could not join this club.',
+            }),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not join. Check your connection and retry.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busyClubs.remove(club.id));
+    }
+  }
+
+  Widget discoveryCard(Group club) {
+    final pending = club.joinRequests.any(
+      (r) =>
+          r.uid == (state.clubService?.uid ?? 'demo-you') &&
+          r.status == 'pending',
+    );
+    final private = club.visibility == ClubVisibility.private;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Panel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    club.name,
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Icon(
+                  private ? Icons.lock_outline : Icons.public,
+                  size: 20,
+                  color: context.palette.muted,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${private ? "Private" : "Public"} · ${club.memberCount} / ${club.memberLimit} members${state.demoData ? " · Demo" : ""}',
+              style: TextStyle(color: context.palette.muted, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed:
+                        busyClubs.contains(club.id) || pending || club.isFull
+                        ? null
+                        : () => joinDiscovered(club),
+                    child: Text(
+                      busyClubs.contains(club.id)
+                          ? 'PLEASE WAIT…'
+                          : pending
+                          ? 'REQUEST SENT'
+                          : club.isFull
+                          ? 'FULL'
+                          : private
+                          ? 'REQUEST TO JOIN'
+                          : 'JOIN CLUB',
+                    ),
+                  ),
+                ),
+                if (private) ...[
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    onPressed: () => showJoin(context),
+                    child: const Text('USE CODE'),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void showJoin(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -101,13 +250,16 @@ class FriendsScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded, color: muted),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: context.palette.muted,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${club.members.length} / ${club.memberLimit} members · ${club.partyCompletedCount} of ${club.partyTasks.length} shared tasks done',
-                  style: const TextStyle(color: muted, fontSize: 12),
+                  '${club.memberCount} / ${club.memberLimit} members · ${club.partyCompletedCount} of ${club.partyTasks.length} shared tasks done',
+                  style: TextStyle(color: context.palette.muted, fontSize: 12),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -121,13 +273,36 @@ class FriendsScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     TextButton(
-                      style: TextButton.styleFrom(foregroundColor: muted),
-                      onPressed: () {
-                        state.leaveGroup(groupId: club.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Left ${club.name}')),
-                        );
-                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: context.palette.muted,
+                      ),
+                      onPressed: busyClubs.contains(club.id)
+                          ? null
+                          : () async {
+                              setState(() => busyClubs.add(club.id));
+                              try {
+                                await state.leaveClubOnline(club);
+                              } catch (_) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Could not leave. Please retry.',
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return;
+                              } finally {
+                                if (mounted) {
+                                  setState(() => busyClubs.remove(club.id));
+                                }
+                              }
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Left ${club.name}')),
+                              );
+                            },
                       child: const Text('LEAVE GROUP'),
                     ),
                   ],
@@ -144,7 +319,7 @@ class FriendsScreen extends StatelessWidget {
   Widget build(BuildContext context) => PageBody(
     children: [
       const PageHeading('Friends', ''),
-      if (state.hasGroup) ...[
+      if (state.hasGroup && view == _FriendsView.clubs) ...[
         WeeklyGroupQuest(state: state),
         const SizedBox(height: 20),
       ],
@@ -168,14 +343,61 @@ class FriendsScreen extends StatelessWidget {
         ],
       ),
       const SizedBox(height: 24),
-      if (!state.hasGroup)
-        const Panel(
+      SizedBox(
+        width: double.infinity,
+        child: SegmentedButton<_FriendsView>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: _FriendsView.clubs, label: Text('My clubs')),
+            ButtonSegment(
+              value: _FriendsView.discover,
+              label: Text('Discover'),
+            ),
+          ],
+          selected: {view},
+          onSelectionChanged: (v) => setState(() => view = v.first),
+        ),
+      ),
+      const SizedBox(height: 20),
+      if (state.clubsLoading) const LinearProgressIndicator(),
+      if (state.clubConnectionError != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
           child: Text(
-            'You are not in a group. Start a club or join with an invite.',
-            style: TextStyle(color: muted, height: 1.5),
+            state.clubConnectionError!,
+            style: TextStyle(color: context.palette.muted),
           ),
         ),
-      ...state.joinedGroups.map((club) => clubCard(context, club)),
+      if (view == _FriendsView.clubs && !state.hasGroup)
+        Panel(
+          child: Text(
+            'You are not in a group. Start a club or join with an invite.',
+            style: TextStyle(color: context.palette.muted, height: 1.5),
+          ),
+        ),
+      if (view == _FriendsView.clubs)
+        ...state.joinedGroups.map((club) => clubCard(context, club)),
+      if (view == _FriendsView.discover) ...[
+        TextField(
+          onChanged: (v) => setState(() => search = v.trim().toLowerCase()),
+          decoration: const InputDecoration(
+            hintText: 'Find a club',
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
+        const SizedBox(height: 18),
+        if (!state.clubsLoading &&
+            state.discoverableClubs
+                .where((c) => c.name.toLowerCase().contains(search))
+                .isEmpty)
+          Text(
+            'No clubs found. Start one and invite your crew.',
+            style: TextStyle(color: context.palette.muted),
+          ),
+        ...state.discoverableClubs
+            .where((c) => c.name.toLowerCase().contains(search))
+            .map(discoveryCard),
+      ],
     ],
   );
 }
