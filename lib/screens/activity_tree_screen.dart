@@ -212,7 +212,10 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                                 center: const Alignment(0, -.3),
                                 radius: 1.1,
                                 colors: [
-                                  current.color.withValues(alpha: .055),
+                                  Color.alphaBlend(
+                                    current.color.withValues(alpha: .055),
+                                    background,
+                                  ),
                                   background,
                                 ],
                               ),
