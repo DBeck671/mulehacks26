@@ -30,8 +30,6 @@ class QuestRowCard extends StatelessWidget {
               child: Icon(
                 quest.isLocked
                     ? Icons.lock_outline
-                    : quest.isCompleted
-                    ? Icons.check_rounded
                     : quest.categories.first.icon,
                 color: quest.color,
               ),

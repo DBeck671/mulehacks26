@@ -247,9 +247,7 @@ class QuestCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: Icon(
-                        quest.isCompleted && !quest.isActive
-                            ? Icons.check_rounded
-                            : quest.isLocked
+                        quest.isLocked
                             ? Icons.lock_outline
                             : quest.categories.first.icon,
                         color: quest.color,

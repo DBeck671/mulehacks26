@@ -113,9 +113,7 @@ class QuestDetailScreen extends StatelessWidget {
                   border: Border.all(color: quest.color.withValues(alpha: .3)),
                 ),
                 child: Icon(
-                  quest.isCompleted
-                      ? Icons.check_rounded
-                      : quest.isLocked
+                  quest.isLocked
                       ? Icons.lock_outline
                       : quest.categories.first.icon,
                   color: quest.color,

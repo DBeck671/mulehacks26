@@ -16,18 +16,17 @@ void main() {
       final state = AppState();
       addTearDown(state.dispose);
       await tester.pumpWidget(
-        MaterialApp(home: ActivityTreeScreen(state: state)),
+        MaterialApp(home: ActivityTreeScreen(state: state, questId: 3)),
       );
       expect(find.byKey(const ValueKey('tree-task-1')), findsOneWidget);
       expect(find.byKey(const ValueKey('tree-task-2')), findsOneWidget);
       expect(find.byKey(const ValueKey('tree-task-3')), findsOneWidget);
       expect(find.byKey(const ValueKey('tree-task-13')), findsOneWidget);
-      expect(find.byType(InteractiveViewer), findsNothing);
+      expect(find.byType(InteractiveViewer), findsOneWidget);
       for (final quest in state.quests) {
         expect(find.byKey(ValueKey('tree-task-${quest.id}')), findsOneWidget);
       }
-      expect(find.text('Highlight a quest'), findsOneWidget);
-      expect(find.text('All sidequests'), findsOneWidget);
+      expect(find.byType(DropdownButtonFormField<int>), findsNothing);
       final combinedQuest = find.byKey(const ValueKey('tree-task-13'));
       expect(
         find.descendant(of: combinedQuest, matching: find.text('Nature')),
@@ -57,7 +56,26 @@ void main() {
         findsOneWidget,
       );
       expect(state.quest(13).isLocked, isTrue);
-      await tester.ensureVisible(find.byKey(const ValueKey('tree-task-3')));
+      final viewer = tester.widget<InteractiveViewer>(
+        find.byType(InteractiveViewer),
+      );
+      final camera = viewer.transformationController!;
+      final originalScale = camera.value.entry(0, 0);
+      await tester.tap(find.byTooltip('Zoom in'));
+      await tester.pump();
+      expect(camera.value.entry(0, 0), greaterThan(originalScale));
+      final beforeDrag = camera.value.getTranslation().clone();
+      await tester.drag(
+        find.byKey(const ValueKey('quest-tree-map')),
+        const Offset(-100, -80),
+      );
+      await tester.pumpAndSettle();
+      expect(camera.value.getTranslation(), isNot(beforeDrag));
+      await tester.tap(find.byTooltip('Fit entire tree'));
+      await tester.pump();
+      expect(camera.value.entry(0, 0), lessThan(originalScale));
+      await tester.tap(find.byTooltip('Reset view'));
+      await tester.pump();
       await tester.tap(find.byKey(const ValueKey('tree-task-3')));
       await tester.pumpAndSettle();
       expect(find.text('YOUR SIDEQUEST'), findsOneWidget);

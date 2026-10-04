@@ -193,12 +193,16 @@ appear below the weekly group quest, before the list. Each card has an invite
 action and its own Leave Group control; leaving an unselected club does not
 change the currently selected club.
 
-Activity tree now shows all 26 quests and every prerequisite connection in
-one vertically scrollable map. Highlighting a quest emphasizes its ancestors
-without hiding any other nodes or edges. Cards include prerequisite labels,
-update their unlock/completion status and open task details when tapped.
+Activity tree shows all 26 quests and every prerequisite connection on a
+spacious canvas. Drag to move, pinch or use +/- to zoom, Fit entire tree for
+the overview, and Reset view to return to the entry point. Quest cards remain
+tappable, category-coded, and update their unlock/completion status. There is
+no quest picker.
 
 Tree cards, category labels and branch lines use the shared category colours:
 Nature green, Creativity purple, Learning blue, Exploration orange, Wellness
 pink, and Food yellow. Multi-category quests show every category label; lock
 and completion status remain separate from the category colour.
+
+Completed quest cards retain their original category icons. Completion is
+shown by status text rather than replacing the task icon with a tick.
