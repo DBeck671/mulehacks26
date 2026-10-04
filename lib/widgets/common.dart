@@ -52,10 +52,12 @@ class Eyebrow extends StatelessWidget {
 }
 
 class PageBody extends StatelessWidget {
-  const PageBody({super.key, required this.children});
+  const PageBody({super.key, required this.children, this.scrollPhysics});
   final List<Widget> children;
+  final ScrollPhysics? scrollPhysics;
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
+    physics: scrollPhysics,
     padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
     child: Center(
       child: ConstrainedBox(

@@ -14,7 +14,7 @@ Future<void> main() async {
     showcaseMode: true,
   );
   if (!state.hasProfile) state.setProfile('You', 'Prefer not to say');
-  if (state.interests.isEmpty) {
+  if (state.hasSeededProgress && state.interests.isEmpty) {
     state.interests.addAll([Category.exploration, Category.creativity]);
   }
   state.setDemoBotsRunning(true);

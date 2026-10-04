@@ -68,6 +68,7 @@ class AppState extends ChangeNotifier {
     if (showcaseMode && !demoData) {
       throw ArgumentError('Showcase requires isolated demo data');
     }
+    _seededProgress = demoData;
     audio.enabled = showcaseMode;
     player = initialGroup.members.firstWhere((f) => f.id == 0);
     if (!demoData) {
@@ -104,6 +105,8 @@ class AppState extends ChangeNotifier {
   }
   PhotoVerifier photoVerifier;
   final bool demoData;
+  late bool _seededProgress;
+  bool get hasSeededProgress => _seededProgress;
   final bool showcaseMode;
   final QuestAudio audio = QuestAudio();
   void setSoundEnabled(bool enabled) {
@@ -274,6 +277,9 @@ class AppState extends ChangeNotifier {
       if (stored == null) return state;
       final data = jsonDecode(stored) as Map<String, dynamic>;
       if (data['version'] != 1) throw const FormatException('Unknown history');
+      if (demoData && data['demoFreshStart'] == true) {
+        state._clearDemoProgress();
+      }
       state.profileName = data['profileName'] as String? ?? '';
       state.profileGender =
           data['profileGender'] as String? ?? 'Prefer not to say';
@@ -309,7 +315,7 @@ class AppState extends ChangeNotifier {
         0,
         (sum, e) => sum + e.xp,
       );
-      state.you.xp = (state.demoData ? 1075 : 0) + state.earnedXP;
+      state.you.xp = (state.hasSeededProgress ? 1075 : 0) + state.earnedXP;
       state.you.questsCompleted += state.completedActivities.length;
       for (final entry in questParents.entries) {
         if (entry.value.every((id) => state.quest(id).isCompleted)) {
@@ -380,6 +386,7 @@ class AppState extends ChangeNotifier {
     if (store == null) return;
     final snapshot = jsonEncode({
       'version': 1,
+      'demoFreshStart': demoData && !hasSeededProgress,
       'soundEnabled': audio.enabled,
       'activities': completedActivities.map((e) => e.toJson()).toList(),
       'interests': interests.map((c) => c.name).toList(),
@@ -400,6 +407,62 @@ class AppState extends ChangeNotifier {
       }
       if (!_disposed) notifyListeners();
     });
+  }
+
+  void _clearDemoProgress() {
+    _seededProgress = false;
+    _botTimer?.cancel();
+    _botTimer = null;
+    demoBotsRunning = false;
+    for (final timer in _chatTimers) {
+      timer.cancel();
+    }
+    _chatTimers.clear();
+    for (final q in quests) {
+      q.isActive = false;
+      q.attemptClock.stop();
+      q.verification.reset();
+    }
+    quests
+      ..clear()
+      ..addAll(sampleQuests());
+    connections
+      ..clear()
+      ..addAll(sampleConnections());
+    groups.clear();
+    joinedGroupIds.clear();
+    activeGroupId = null;
+    groupContributions.clear();
+    _partyAttempts.clear();
+    _clubMessages.clear();
+    _demoClubActivity.clear();
+    _botTurn = 0;
+    totalXP = 0;
+    completedThisSession = 0;
+    completedActivities.clear();
+    recentActivity.clear();
+    rewardClaims.clear();
+    _earnedBadgeIds.clear();
+    _equippedBadgeIds.clear();
+    _lastSuggestions.clear();
+    highlightedId = null;
+    featuredId = 1;
+    interests.clear();
+    profileName = 'You';
+    profileGender = 'Prefer not to say';
+    you
+      ..name = 'You'
+      ..avatarInitial = 'Y'
+      ..xp = 0
+      ..questsCompleted = 0;
+  }
+
+  Future<void> resetDemoAccount() async {
+    if (!demoData) throw StateError('Only demo accounts can be reset.');
+    _clearDemoProgress();
+    _saveHistory();
+    notifyListeners();
+    await historySaved;
   }
 
   void retryHistorySave() => _saveHistory();
@@ -743,11 +806,12 @@ class AppState extends ChangeNotifier {
   );
   int get level => totalXP ~/ 1000 + 1;
   int get levelXP => totalXP % 1000;
-  int get earnedXP => totalXP - (demoData ? 3780 : 0);
+  int get earnedXP => totalXP - (hasSeededProgress ? 3780 : 0);
   // Historical demo totals are separate from playable quest prerequisites.
-  int get completedCount => (demoData ? 12 : 0) + completedThisSession;
+  int get completedCount => (hasSeededProgress ? 12 : 0) + completedThisSession;
   int get connectionCount =>
-      (demoData ? 6 : 0) + connections.where((c) => c.isDiscovered).length;
+      (hasSeededProgress ? 6 : 0) +
+      connections.where((c) => c.isDiscovered).length;
   Friend get you => player;
   List<Friend> get leaderboard => hasGroup
       ? ([...group.members]..sort((a, b) => b.xp.compareTo(a.xp)))
@@ -1060,7 +1124,7 @@ class AppState extends ChangeNotifier {
     q.isNew = false;
     totalXP += reward;
     completedThisSession++;
-    you.xp = (demoData ? 1075 : 0) + earnedXP;
+    you.xp = (hasSeededProgress ? 1075 : 0) + earnedXP;
     you.questsCompleted++;
     highlightedId = q.id;
     final unlocked = <Quest>[];

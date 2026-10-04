@@ -5,12 +5,22 @@ import '../models/quest.dart';
 import '../widgets/common.dart';
 import 'activity_tree_screen.dart';
 
-class ProgressScreen extends StatelessWidget {
+class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key, required this.state});
   final AppState state;
   @override
+  State<ProgressScreen> createState() => _ProgressScreenState();
+}
+
+class _ProgressScreenState extends State<ProgressScreen> {
+  AppState get state => widget.state;
+  bool overTree = false, touchingTree = false;
+  @override
   Widget build(BuildContext context) {
     return PageBody(
+      scrollPhysics: overTree || touchingTree
+          ? const NeverScrollableScrollPhysics()
+          : null,
       children: [
         const PageHeading('Your Journey', ''),
         Panel(
@@ -41,7 +51,16 @@ class ProgressScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           child: SizedBox(
             height: 600,
-            child: ActivityTreeScreen(state: state, embedded: true),
+            child: MouseRegion(
+              onEnter: (_) => setState(() => overTree = true),
+              onExit: (_) => setState(() => overTree = false),
+              child: Listener(
+                onPointerDown: (_) => setState(() => touchingTree = true),
+                onPointerUp: (_) => setState(() => touchingTree = false),
+                onPointerCancel: (_) => setState(() => touchingTree = false),
+                child: ActivityTreeScreen(state: state, embedded: true),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -53,7 +72,9 @@ class ProgressScreen extends StatelessWidget {
         const Eyebrow('YOUR PATHS'),
         const SizedBox(height: 16),
         ...Category.values.map((c) {
-          final base = state.demoData ? [4, 3, 3, 2, 2, 1][c.index] : 1;
+          final base = state.hasSeededProgress
+              ? [4, 3, 3, 2, 2, 1][c.index]
+              : 1;
           final count = state.categoryCount(c);
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -84,7 +105,7 @@ class ProgressScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         SmoothBar(
-                          value: state.demoData
+                          value: state.hasSeededProgress
                               ? ((base + count) % 5 + 1) / 6
                               : (count % 3) / 3,
                           color: c.color,

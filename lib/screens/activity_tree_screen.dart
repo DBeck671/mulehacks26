@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 
 import '../app_state.dart';
 import '../data/sample_quests.dart';
@@ -178,37 +179,60 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                           minScale: .85,
                           maxScale: .85,
                           boundaryMargin: const EdgeInsets.all(650),
-                          child: SizedBox(
-                            width: mapSize.width,
-                            height: mapSize.height,
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: CustomPaint(
-                                    painter: _BranchPainter(
-                                      positions: positions,
-                                      activeIds: activeIds,
-                                      colors: {
-                                        for (final q in widget.state.quests)
-                                          q.id: q.color,
-                                      },
-                                      pulse: pulse,
-                                      reducedMotion: reducedMotion,
+                          child: Listener(
+                            onPointerSignal: (event) {
+                              if (event is PointerScrollEvent) {
+                                GestureBinding.instance.pointerSignalResolver
+                                    .register(event, (_) {
+                                      // InteractiveViewer already pans trackpad events.
+                                      // Claim the event so an ancestor cannot scroll too.
+                                      if (event.kind !=
+                                          PointerDeviceKind.trackpad) {
+                                        final next = camera.value.clone();
+                                        next.setTranslationRaw(
+                                          next.storage[12] -
+                                              event.scrollDelta.dx,
+                                          next.storage[13] -
+                                              event.scrollDelta.dy,
+                                          next.storage[14],
+                                        );
+                                        camera.value = next;
+                                      }
+                                    });
+                              }
+                            },
+                            child: SizedBox(
+                              width: mapSize.width,
+                              height: mapSize.height,
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: CustomPaint(
+                                      painter: _BranchPainter(
+                                        positions: positions,
+                                        activeIds: activeIds,
+                                        colors: {
+                                          for (final q in widget.state.quests)
+                                            q.id: q.color,
+                                        },
+                                        pulse: pulse,
+                                        reducedMotion: reducedMotion,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                for (final entry in positions.entries)
-                                  Positioned.fromRect(
-                                    rect: entry.value,
-                                    child: _QuestOrb(
-                                      key: ValueKey('tree-task-${entry.key}'),
-                                      quest: widget.state.quest(entry.key),
-                                      related: related.contains(entry.key),
-                                      pulse: pulse,
-                                      reducedMotion: reducedMotion,
+                                  for (final entry in positions.entries)
+                                    Positioned.fromRect(
+                                      rect: entry.value,
+                                      child: _QuestOrb(
+                                        key: ValueKey('tree-task-${entry.key}'),
+                                        quest: widget.state.quest(entry.key),
+                                        related: related.contains(entry.key),
+                                        pulse: pulse,
+                                        reducedMotion: reducedMotion,
+                                      ),
                                     ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),

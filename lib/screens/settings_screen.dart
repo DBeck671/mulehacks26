@@ -6,6 +6,43 @@ import '../widgets/common.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.state});
   final AppState state;
+  Future<void> resetDemo(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset demo account?'),
+        content: const Text(
+          'Start at Level 1 with no XP, activity, active tasks, rewards, badges or clubs. This clears only this demo account.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('RESET DEMO'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await state.resetDemoAccount();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          state.historySaveFailed
+              ? 'Reset in memory. Saving failed; retry before refreshing.'
+              : 'Demo reset. Ready for your first quest.',
+        ),
+        action: state.historySaveFailed
+            ? SnackBarAction(label: 'RETRY', onPressed: state.retryHistorySave)
+            : null,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: state,
@@ -14,24 +51,40 @@ class SettingsScreen extends StatelessWidget {
       body: PageBody(
         children: [
           Panel(
-            child: SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Show completed quests'),
-              subtitle: const Text('Keep repeatable tasks visible in Explore.'),
-              value: state.showCompletedQuests,
-              onChanged: state.setShowCompletedQuests,
+            child: Material(
+              type: MaterialType.transparency,
+              child: SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Show completed quests'),
+                subtitle: const Text(
+                  'Keep repeatable tasks visible in Explore.',
+                ),
+                value: state.showCompletedQuests,
+                onChanged: state.setShowCompletedQuests,
+              ),
             ),
           ),
           const SizedBox(height: 16),
           Panel(
-            child: SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Sound effects'),
-              value: state.audio.enabled,
-              onChanged: state.setSoundEnabled,
+            child: Material(
+              type: MaterialType.transparency,
+              child: SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Sound effects'),
+                value: state.audio.enabled,
+                onChanged: state.setSoundEnabled,
+              ),
             ),
           ),
           const SizedBox(height: 20),
+          if (state.demoData) ...[
+            OutlinedButton.icon(
+              onPressed: () => resetDemo(context),
+              icon: const Icon(Icons.restart_alt_rounded),
+              label: const Text('RESET DEMO ACCOUNT'),
+            ),
+            const SizedBox(height: 20),
+          ],
           const Text(
             'Activity history is saved on this device for your account. Signing out keeps your saved log. Device storage is separate from other devices.',
             style: TextStyle(color: muted, height: 1.6),

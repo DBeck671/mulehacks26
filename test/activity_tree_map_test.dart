@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sidequest/app_state.dart';
 import 'package:sidequest/screens/activity_tree_screen.dart';
@@ -15,6 +16,69 @@ Widget app(Widget child) => MaterialApp(
 );
 
 void main() {
+  testWidgets(
+    'tree owns wheel, trackpad and touch movement; outside still scrolls page',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final state = AppState();
+      addTearDown(state.dispose);
+      await tester.pumpWidget(
+        app(Scaffold(body: ProgressScreen(state: state))),
+      );
+      await tester.pumpAndSettle();
+      final scroll = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+      final viewer = tester.widget<InteractiveViewer>(
+        find.byType(InteractiveViewer),
+      );
+      final camera = viewer.transformationController!;
+      final position = tester.getCenter(find.byType(InteractiveViewer));
+      for (final kind in [
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+      ]) {
+        final before = camera.value.getTranslation().clone();
+        await tester.sendEventToBinding(
+          PointerScrollEvent(
+            position: position,
+            scrollDelta: const Offset(30, 80),
+            kind: kind,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(camera.value.getTranslation(), isNot(before));
+        expect(scroll.position.pixels, 0);
+      }
+      final before = camera.value.getTranslation().clone();
+      final touch = await tester.startGesture(position);
+      await tester.pump();
+      await touch.moveBy(const Offset(0, -120));
+      await tester.pump();
+      await touch.up();
+      await tester.pumpAndSettle();
+      expect(camera.value.getTranslation(), isNot(before));
+      expect(scroll.position.pixels, 0);
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: position);
+      await tester.pump();
+      await mouse.moveTo(const Offset(10, 100));
+      await tester.pump();
+      await tester.sendEventToBinding(
+        const PointerScrollEvent(
+          position: Offset(100, 100),
+          scrollDelta: Offset(0, 120),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(scroll.position.pixels, greaterThan(0));
+      await mouse.removePointer();
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   testWidgets(
     'Progress shows read-only tree below level without duplicate rewards or achievements',
     (tester) async {

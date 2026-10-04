@@ -200,6 +200,13 @@ clicked and the scale is fixed. Active quests pulse and their directly attached
 links glow. Brief active-task summaries appear beneath the tree. Category icons
 and unlock/completion status remain visible.
 
+Mouse-wheel, trackpad and touch gestures inside the tree move only its canvas;
+the surrounding Progress page scrolls when the pointer is outside that section.
+In a demo account, Account menu → Settings → Reset demo account clears XP,
+completed history, active attempts, unlocks/connections, tokens, claims, badges,
+clubs and chat. It also removes seeded progress so the demo stays at Level 1
+after reopening. The button requires confirmation and is absent for real users.
+
 Club hosts choose 2–100 member slots, including themselves, when creating a
 club, and can adjust them from Club Activity → Members. Joining a full club
 fails without changing membership. In showcase mode, dummy friends fill the
