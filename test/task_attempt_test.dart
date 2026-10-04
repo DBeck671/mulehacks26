@@ -9,6 +9,27 @@ import 'package:sidequest/screens/main_screen.dart';
 import 'package:sidequest/widgets/quest_row_card.dart';
 
 void main() {
+  test(
+    'starting another quest preserves running and manually paused timers',
+    () {
+      final state = AppState();
+      addTearDown(state.dispose);
+      final first = state.quest(2), second = state.quest(4);
+      state.start(first);
+      state.start(second);
+      expect(first.attemptClock.isRunning, isTrue);
+      expect(second.attemptClock.isRunning, isTrue);
+      state.toggleTaskTimer(first);
+      expect(first.attemptClock.isRunning, isFalse);
+      state.start(second);
+      expect(first.attemptClock.isRunning, isFalse);
+      state.toggleTaskTimer(first);
+      expect(first.attemptClock.isRunning, isTrue);
+      state.stop(second);
+      expect(first.attemptClock.isRunning, isTrue);
+      expect(second.attemptClock.isRunning, isFalse);
+    },
+  );
   test('club starts enforce the same limit and reopening preserves a paused attempt', () {
     final state = AppState(demoData: true);
     addTearDown(state.dispose);

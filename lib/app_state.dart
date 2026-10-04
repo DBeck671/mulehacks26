@@ -650,7 +650,6 @@ class AppState extends ChangeNotifier {
   bool start(Quest q) {
     if (!canStart(q)) return false;
     for (final other in quests.where((other) => other.id != q.id)) {
-      other.attemptClock.stop();
       pauseRoute(other, notify: false);
     }
     if (q.isActive) {

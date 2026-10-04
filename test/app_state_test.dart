@@ -138,7 +138,7 @@ void main() {
     state.start(state.quest(4));
     expect(state.active!.id, 4);
     expect(state.quest(5).isActive, isTrue);
-    expect(state.quest(5).attemptClock.isRunning, isFalse);
+    expect(state.quest(5).attemptClock.isRunning, isTrue);
     expect(state.activeQuests.map((q) => q.id), containsAll([4, 5]));
     expect(state.nodes.firstWhere((n) => n.questId == 13).parentQuestIds, [
       3,

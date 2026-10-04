@@ -83,7 +83,7 @@ void main() {
     expect(find.text('Members'), findsNothing);
   });
   testWidgets(
-    'bottom Next and swipe keep started quests paused and resumable',
+    'bottom Next and swipe keep active quest timers running',
     (tester) async {
       final state = AppState();
       addTearDown(state.dispose);
@@ -104,7 +104,7 @@ void main() {
       await tester.tap(bottom);
       await tester.pumpAndSettle();
       expect(first.isActive, isTrue);
-      expect(first.attemptClock.isRunning, isFalse);
+      expect(first.attemptClock.isRunning, isTrue);
       expect(first.verification.isSatisfied, isTrue);
       expect(first.attemptNumber, attempt);
       final second = tester
@@ -122,7 +122,7 @@ void main() {
         state.activeQuests.map((q) => q.id),
         containsAll([first.id, second.id]),
       );
-      expect(second.attemptClock.isRunning, isFalse);
+      expect(second.attemptClock.isRunning, isTrue);
       expect(state.completedActivities, isEmpty);
       expect(state.totalXP, 0);
       state.start(first);

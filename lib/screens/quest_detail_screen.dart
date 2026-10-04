@@ -27,7 +27,6 @@ class QuestDetailScreen extends StatelessWidget {
       );
       return;
     }
-    state.pauseTask(quest);
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
     Navigator.pushReplacement<bool, bool>(
       context,
