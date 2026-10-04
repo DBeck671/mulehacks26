@@ -17,6 +17,63 @@ Widget app(Widget child) => MaterialApp(
 
 void main() {
   testWidgets(
+    'zoom controls preserve the view center, enforce limits, and pinch zooms',
+    (tester) async {
+      final state = AppState();
+      addTearDown(state.dispose);
+      await tester.pumpWidget(app(ActivityTreeScreen(state: state)));
+      await tester.pumpAndSettle();
+      final viewer = tester.widget<InteractiveViewer>(
+        find.byType(InteractiveViewer),
+      );
+      final camera = viewer.transformationController!;
+      final bounds = tester.getRect(find.byType(InteractiveViewer));
+      final localCenter = bounds.size.center(Offset.zero);
+      final sceneCenter = camera.toScene(localCenter);
+      await tester.tap(find.byTooltip('Zoom in'));
+      await tester.pump();
+      expect(camera.value.getMaxScaleOnAxis(), closeTo(.85 * 1.25, .001));
+      expect(
+        (camera.toScene(localCenter) - sceneCenter).distance,
+        lessThan(.001),
+      );
+      for (var i = 0; i < 15; i++) {
+        await tester.tap(find.byTooltip('Zoom in'));
+      }
+      expect(camera.value.getMaxScaleOnAxis(), closeTo(1.8, .001));
+      for (var i = 0; i < 15; i++) {
+        await tester.tap(find.byTooltip('Zoom out'));
+      }
+      expect(camera.value.getMaxScaleOnAxis(), closeTo(.35, .001));
+      await tester.sendEventToBinding(
+        PointerScaleEvent(position: bounds.center, scale: 1.5),
+      );
+      await tester.pump();
+      expect(camera.value.getMaxScaleOnAxis(), closeTo(.525, .001));
+      final a = await tester.startGesture(
+        bounds.center - const Offset(40, 0),
+        pointer: 1,
+      );
+      final b = await tester.startGesture(
+        bounds.center + const Offset(40, 0),
+        pointer: 2,
+      );
+      await a.moveBy(const Offset(-10, 0));
+      await b.moveBy(const Offset(10, 0));
+      await tester.pump();
+      final before = camera.value.getMaxScaleOnAxis();
+      await a.moveBy(const Offset(-50, 0));
+      await b.moveBy(const Offset(50, 0));
+      await tester.pump();
+      expect(camera.value.getMaxScaleOnAxis(), greaterThan(before));
+      await a.up();
+      await b.up();
+      expect(state.activeQuests, isEmpty);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
     'tree owns wheel, trackpad and touch movement; outside still scrolls page',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
@@ -101,7 +158,7 @@ void main() {
         greaterThan(tester.getTopLeft(find.text('Level 1').first).dy),
       );
       expect(find.text('No active quests'), findsOneWidget);
-      expect(find.byTooltip('Zoom in'), findsNothing);
+      expect(find.byTooltip('Zoom in'), findsOneWidget);
       expect(find.byTooltip('View quest'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
@@ -118,13 +175,19 @@ void main() {
       for (final quest in state.quests) {
         expect(find.byKey(ValueKey('tree-task-${quest.id}')), findsOneWidget);
       }
-      expect(find.byType(InkWell), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('tree-task-1')),
+          matching: find.byType(InkWell),
+        ),
+        findsNothing,
+      );
       expect(find.byTooltip('Fit entire tree'), findsNothing);
       expect(find.byTooltip('Reset view'), findsNothing);
       final viewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),
       );
-      expect(viewer.scaleEnabled, isFalse);
+      expect(viewer.scaleEnabled, isTrue);
       expect(viewer.panEnabled, isTrue);
       final camera = viewer.transformationController!;
       final scale = camera.value.entry(0, 0);

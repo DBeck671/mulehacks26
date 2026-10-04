@@ -195,8 +195,8 @@ action and its own Leave Group control; leaving an unselected club does not
 change the currently selected club.
 
 Activity tree shows all 26 quests and every prerequisite connection on a
-spacious, read-only canvas. Drag to explore; nodes and connections cannot be
-clicked and the scale is fixed. Active quests pulse and their directly attached
+spacious canvas with read-only nodes. Drag to explore, pinch to zoom, or use the
+compact +/− controls; nodes and connections cannot be clicked. Active quests pulse and their directly attached
 links glow. Brief active-task summaries appear beneath the tree. Category icons
 and unlock/completion status remain visible.
 

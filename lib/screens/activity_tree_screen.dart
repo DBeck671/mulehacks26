@@ -62,10 +62,24 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
   void focusTasks(List<Quest> active) {
     if (viewport.isEmpty) return;
     final target = positions[active.firstOrNull?.id ?? widget.questId]!;
-    camera.value = Matrix4.diagonal3Values(.85, .85, 1)
+    camera.value = Matrix4.diagonal3Values(.85, .85, .85)
       ..setTranslationRaw(
         viewport.width / 2 - target.center.dx * .85,
         viewport.height / 2 - target.center.dy * .85,
+        0,
+      );
+  }
+
+  void zoom(double factor) {
+    if (viewport.isEmpty) return;
+    final current = camera.value;
+    final oldScale = current.getMaxScaleOnAxis();
+    final nextScale = (oldScale * factor).clamp(.35, 1.8);
+    final center = viewport.center(Offset.zero);
+    camera.value = Matrix4.diagonal3Values(nextScale, nextScale, nextScale)
+      ..setTranslationRaw(
+        center.dx - (center.dx - current.storage[12]) * nextScale / oldScale,
+        center.dy - (center.dy - current.storage[13]) * nextScale / oldScale,
         0,
       );
   }
@@ -133,6 +147,18 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
         appBar: AppBar(
           automaticallyImplyLeading: !widget.embedded,
           title: const Text('Activity tree'),
+          actions: [
+            IconButton(
+              tooltip: 'Zoom out',
+              onPressed: () => zoom(1 / 1.25),
+              icon: const Icon(Icons.remove_rounded),
+            ),
+            IconButton(
+              tooltip: 'Zoom in',
+              onPressed: () => zoom(1.25),
+              icon: const Icon(Icons.add_rounded),
+            ),
+          ],
         ),
         body: SafeArea(
           top: !widget.embedded,
@@ -174,10 +200,12 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                           key: const ValueKey('quest-tree-map'),
                           transformationController: camera,
                           constrained: false,
-                          scaleEnabled: false,
+                          scaleEnabled: true,
                           panEnabled: true,
-                          minScale: .85,
-                          maxScale: .85,
+                          minScale: .35,
+                          maxScale: 1.8,
+                          // Wheel events pan through our signal handler; pinch zooms.
+                          scaleFactor: double.infinity,
                           boundaryMargin: const EdgeInsets.all(650),
                           child: Listener(
                             onPointerSignal: (event) {
@@ -241,7 +269,7 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                           bottom: 16,
                           child: IgnorePointer(
                             child: Text(
-                              'Drag to explore',
+                              'Drag to explore · Pinch to zoom',
                               style: TextStyle(color: muted, fontSize: 11),
                             ),
                           ),
