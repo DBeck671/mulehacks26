@@ -6,9 +6,8 @@ import '../widgets/common.dart';
 import 'activity_tree_screen.dart';
 
 class ProgressScreen extends StatelessWidget {
-  const ProgressScreen({super.key, required this.state, this.onReturnQuests});
+  const ProgressScreen({super.key, required this.state});
   final AppState state;
-  final VoidCallback? onReturnQuests;
   @override
   Widget build(BuildContext context) {
     return PageBody(
@@ -42,11 +41,7 @@ class ProgressScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           child: SizedBox(
             height: 600,
-            child: ActivityTreeScreen(
-              state: state,
-              embedded: true,
-              onReturnQuests: onReturnQuests,
-            ),
+            child: ActivityTreeScreen(state: state, embedded: true),
           ),
         ),
         const SizedBox(height: 24),

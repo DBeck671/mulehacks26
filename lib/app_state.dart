@@ -55,7 +55,7 @@ class CompletionResult {
 
 // One small ChangeNotifier owns the entire local demo. Screens only read it
 // and call these methods, so tab changes never reset gameplay progress.
-enum JoinGroupResult { joined, alreadyActive, invalidCode, unknownCode }
+enum JoinGroupResult { joined, alreadyActive, invalidCode, unknownCode, full }
 
 class AppState extends ChangeNotifier {
   AppState({
@@ -174,23 +174,27 @@ class AppState extends ChangeNotifier {
   List<String> get clubRecentActivity =>
       hasGroup ? (_demoClubActivity[group.id] ?? []) : recentActivity;
 
-  void _fillDemoFriends(Group club) {
-    if (!showcaseMode) return;
+  int _fillDemoFriends(Group club) {
+    if (!showcaseMode) return 0;
+    var added = 0;
     const names = ['Alex', 'Jordan', 'Sam', 'Chris'];
-    for (var i = 0; i < names.length; i++) {
+    for (var i = 0; i < club.memberLimit - 1; i++) {
       final id = i + 1;
+      final name = i < names.length ? names[i] : 'Explorer ${i + 1}';
       if (!club.members.any((f) => f.id == id)) {
         club.members.add(
           Friend(
             id: id,
-            name: names[i],
+            name: name,
             xp: 0,
-            avatarInitial: names[i][0],
+            avatarInitial: name[0],
             questsCompleted: 0,
           ),
         );
+        added++;
       }
     }
+    return added;
   }
 
   void setDemoBotsRunning(bool running) {
@@ -496,7 +500,8 @@ class AppState extends ChangeNotifier {
   List<int> get challengeContributions =>
       groupContributions.putIfAbsent(activeGroupId ?? 0, () => []);
 
-  Group createClub(String input) {
+  Group createClub(String input, {int memberLimit = 5}) {
+    _validateMemberLimit(memberLimit);
     final name = input.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (name.length < 2 || name.length > 40) {
       throw const FormatException('Choose a club name with 2–40 characters.');
@@ -518,8 +523,9 @@ class AppState extends ChangeNotifier {
       inviteCode: 'INV-$suffix',
       weeklyChallengeProgress: 0,
       hostId: you.id,
+      memberLimit: memberLimit,
     );
-    _fillDemoFriends(club);
+    if (_fillDemoFriends(club) > 0) audio.play('join');
     _generatePartyTasks(club);
     groups.add(club);
     joinedGroupIds.add(club.id);
@@ -527,6 +533,39 @@ class AppState extends ChangeNotifier {
     if (demoBotsRunning) simulateFriendCompletion();
     notifyListeners();
     return club;
+  }
+
+  void _validateMemberLimit(int limit) {
+    if (limit < Group.minMemberLimit || limit > Group.maxMemberLimit) {
+      throw const FormatException('Choose 2–100 member slots.');
+    }
+  }
+
+  void setClubMemberLimit(int groupId, int limit) {
+    _validateMemberLimit(limit);
+    final club = groups.where((g) => g.id == groupId).firstOrNull;
+    if (club == null ||
+        club.hostId != you.id ||
+        !joinedGroupIds.contains(groupId)) {
+      throw const FormatException(
+        'Only the club host can change member slots.',
+      );
+    }
+    if (showcaseMode) {
+      // Demo friends are simulated; resizing never removes a real member.
+      final bots = club.members.where((f) => f.id != you.id).toList();
+      for (final bot in bots.skip(limit - 1)) {
+        club.members.remove(bot);
+      }
+    }
+    if (limit < club.members.length) {
+      throw const FormatException(
+        'Member slots cannot be fewer than current members.',
+      );
+    }
+    club.memberLimit = limit;
+    if (_fillDemoFriends(club) > 0) audio.play('join');
+    notifyListeners();
   }
 
   JoinGroupResult joinGroup(String input) {
@@ -543,10 +582,14 @@ class AppState extends ChangeNotifier {
         .firstOrNull;
     if (found == null) return JoinGroupResult.unknownCode;
     if (activeGroupId == found.id) return JoinGroupResult.alreadyActive;
-    if (!found.members.any((f) => f.id == 0)) found.members.add(you);
+    if (!found.members.any((f) => f.id == you.id)) {
+      if (found.isFull) return JoinGroupResult.full;
+      found.members.add(you);
+    }
     _fillDemoFriends(found);
     if (found.partyTasks.isEmpty) _generatePartyTasks(found);
-    joinedGroupIds.add(found.id);
+    final newlyJoined = joinedGroupIds.add(found.id);
+    if (newlyJoined) audio.play('join');
     activeGroupId = found.id;
     notifyListeners();
     return JoinGroupResult.joined;

@@ -6,9 +6,17 @@ import 'package:sidequest/screens/progress_screen.dart';
 
 import 'gps_helpers.dart';
 
+Widget app(Widget child) => MaterialApp(
+  builder: (_, child) => MediaQuery(
+    data: const MediaQueryData(size: Size(390, 844), disableAnimations: true),
+    child: child!,
+  ),
+  home: child,
+);
+
 void main() {
   testWidgets(
-    'Progress embeds the interactive tree below the level and removes duplicate rewards and achievements',
+    'Progress shows read-only tree below level without duplicate rewards or achievements',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -17,84 +25,91 @@ void main() {
       final state = AppState();
       addTearDown(state.dispose);
       await tester.pumpWidget(
-        MaterialApp(
-          builder: (_, child) => MediaQuery(
-            data: const MediaQueryData(
-              size: Size(390, 844),
-              disableAnimations: true,
-            ),
-            child: child!,
-          ),
-          home: Scaffold(body: ProgressScreen(state: state)),
-        ),
+        app(Scaffold(body: ProgressScreen(state: state))),
       );
       await tester.pumpAndSettle();
       expect(find.text('Rewards & badges'), findsNothing);
       expect(find.text('ACHIEVEMENTS'), findsNothing);
       expect(find.text('Achievements'), findsNothing);
       expect(find.byType(InteractiveViewer), findsOneWidget);
-      final levelY = tester.getTopLeft(find.text('Level 1').first).dy;
-      final treeY = tester.getTopLeft(find.byType(ActivityTreeScreen)).dy;
-      expect(treeY, greaterThan(levelY));
-      await tester.ensureVisible(find.byTooltip('Zoom in'));
-      await tester.tap(find.byTooltip('Zoom in'));
-      await tester.pump();
+      expect(
+        tester.getTopLeft(find.byType(ActivityTreeScreen)).dy,
+        greaterThan(tester.getTopLeft(find.text('Level 1').first).dy),
+      );
+      expect(find.text('No active quests'), findsOneWidget);
+      expect(find.byTooltip('Zoom in'), findsNothing);
+      expect(find.byTooltip('View quest'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },
   );
 
   testWidgets(
-    'unlock map shows all parents, updates after completion and opens task details',
+    'all quests stay visible to the map; dragging pans without selecting or opening tasks',
     (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
       final state = AppState();
       addTearDown(state.dispose);
-      await tester.pumpWidget(
-        MaterialApp(
-          builder: (_, child) => MediaQuery(
-            data: const MediaQueryData(
-              size: Size(390, 844),
-              disableAnimations: true,
-            ),
-            child: child!,
-          ),
-          home: ActivityTreeScreen(state: state, questId: 3),
-        ),
-      );
-      expect(find.byKey(const ValueKey('tree-task-1')), findsOneWidget);
-      expect(find.byKey(const ValueKey('tree-task-2')), findsOneWidget);
-      expect(find.byKey(const ValueKey('tree-task-3')), findsOneWidget);
-      expect(find.byKey(const ValueKey('tree-task-13')), findsOneWidget);
-      expect(find.byType(InteractiveViewer), findsOneWidget);
+      await tester.pumpWidget(app(ActivityTreeScreen(state: state)));
+      await tester.pumpAndSettle();
       for (final quest in state.quests) {
         expect(find.byKey(ValueKey('tree-task-${quest.id}')), findsOneWidget);
       }
-      expect(find.byType(DropdownButtonFormField<int>), findsNothing);
-      final combinedQuest = find.byKey(const ValueKey('tree-task-13'));
-      expect(
-        find.descendant(of: combinedQuest, matching: find.text('Nature')),
-        findsOneWidget,
+      expect(find.byType(InkWell), findsNothing);
+      expect(find.byTooltip('Fit entire tree'), findsNothing);
+      expect(find.byTooltip('Reset view'), findsNothing);
+      final viewer = tester.widget<InteractiveViewer>(
+        find.byType(InteractiveViewer),
       );
-      expect(
-        find.descendant(of: combinedQuest, matching: find.text('Creativity')),
-        findsOneWidget,
+      expect(viewer.scaleEnabled, isFalse);
+      expect(viewer.panEnabled, isTrue);
+      final camera = viewer.transformationController!;
+      final scale = camera.value.entry(0, 0);
+      final before = camera.value.getTranslation().clone();
+      await tester.drag(
+        find.byKey(const ValueKey('quest-tree-map')),
+        const Offset(-100, -80),
       );
-      final q = state.quest(1);
-      state.start(q);
-      verifyGPS(state, q);
-      state.complete(q);
-      await tester.pump();
-      expect(
-        find.descendant(
-          of: find.byKey(const ValueKey('tree-task-1')),
-          matching: find.text('Completed'),
-        ),
-        findsOneWidget,
-      );
+      await tester.pumpAndSettle();
+      expect(camera.value.getTranslation(), isNot(before));
+      expect(camera.value.entry(0, 0), scale);
+      expect(state.activeQuests, isEmpty);
+      expect(find.text('YOUR SIDEQUEST'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'both active tasks have summaries and halos; stopping and completing clear them',
+    (tester) async {
+      final state = AppState();
+      addTearDown(state.dispose);
+      state.start(state.quest(1));
+      state.start(state.quest(4));
+      await tester.pumpWidget(app(ActivityTreeScreen(state: state)));
+      await tester.pumpAndSettle();
+      for (final id in [1, 4]) {
+        expect(find.byKey(ValueKey('active-tree-pulse-$id')), findsOneWidget);
+        final summary = find.byKey(ValueKey('active-tree-summary-$id'));
+        expect(summary, findsOneWidget);
+        expect(
+          find.descendant(
+            of: summary,
+            matching: find.text(state.quest(id).description),
+          ),
+          findsOneWidget,
+        );
+      }
+      state.pauseTask(state.quest(4));
+      await tester.pumpAndSettle();
+      expect(find.text('Paused'), findsOneWidget);
+      state.stop(state.quest(4));
+      verifyGPS(state, state.quest(1));
+      expect(state.complete(state.quest(1)), isNotNull);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('active-tree-pulse-1')), findsNothing);
+      expect(find.byKey(const ValueKey('active-tree-pulse-4')), findsNothing);
+      expect(find.text('No active quests'), findsOneWidget);
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('tree-task-3')),
@@ -102,34 +117,8 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(state.quest(13).isLocked, isTrue);
-      final viewer = tester.widget<InteractiveViewer>(
-        find.byType(InteractiveViewer),
-      );
-      final camera = viewer.transformationController!;
-      final originalScale = camera.value.entry(0, 0);
-      await tester.tap(find.byTooltip('Zoom in'));
-      await tester.pump();
-      expect(camera.value.entry(0, 0), greaterThan(originalScale));
-      final beforeDrag = camera.value.getTranslation().clone();
-      await tester.drag(
-        find.byKey(const ValueKey('quest-tree-map')),
-        const Offset(-100, -80),
-      );
-      await tester.pumpAndSettle();
-      expect(camera.value.getTranslation(), isNot(beforeDrag));
-      await tester.tap(find.byTooltip('Fit entire tree'));
-      await tester.pump();
-      expect(camera.value.entry(0, 0), lessThan(originalScale));
-      await tester.tap(find.byTooltip('Reset view'));
-      await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('tree-task-3')));
-      await tester.pump();
-      expect(find.text('YOUR SIDEQUEST'), findsNothing);
-      await tester.tap(find.byTooltip('View quest'));
-      await tester.pumpAndSettle();
-      expect(find.text('YOUR SIDEQUEST'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
     },
   );
 }

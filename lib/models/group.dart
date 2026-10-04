@@ -11,10 +11,15 @@ class Group {
     this.groupCode = 'SQ-4821',
     this.inviteCode = 'INV-4821',
     this.hostId = 1,
+    this.memberLimit = 5,
   });
   final int id, weeklyChallengeGoal, hostId;
   final String name, groupCode, inviteCode;
   final List<Friend> members;
+  static const minMemberLimit = 2;
+  static const maxMemberLimit = 100;
+  int memberLimit;
+  bool get isFull => members.length >= memberLimit;
   int weeklyChallengeProgress;
   int partyRound = 0;
   final List<PartyTask> partyTasks = [];

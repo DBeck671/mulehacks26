@@ -56,3 +56,7 @@ config/gemini.local.json
 .env.local
 
 server/.venv/
+
+# Generated presentation media
+artifacts/demo/*.jpg
+artifacts/demo/*.mp4

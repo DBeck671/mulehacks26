@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app_state.dart';
 import 'common.dart';
@@ -80,11 +81,14 @@ class _CreateClubSheet extends StatefulWidget {
 
 class _CreateClubSheetState extends State<_CreateClubSheet> {
   final name = TextEditingController();
+  final slots = TextEditingController(text: '5');
+  String? slotError;
   String? error;
   bool creating = false;
   @override
   void dispose() {
     name.dispose();
+    slots.dispose();
     super.dispose();
   }
 
@@ -92,7 +96,15 @@ class _CreateClubSheetState extends State<_CreateClubSheet> {
     if (creating) return;
     creating = true;
     try {
-      widget.state.createClub(name.text);
+      final count = int.tryParse(slots.text);
+      if (count == null || count < 2 || count > 100) {
+        setState(() {
+          creating = false;
+          slotError = 'Choose 2–100 member slots.';
+        });
+        return;
+      }
+      widget.state.createClub(name.text, memberLimit: count);
       Navigator.pop(context, true);
     } on FormatException catch (e) {
       setState(() {
@@ -138,6 +150,24 @@ class _CreateClubSheetState extends State<_CreateClubSheet> {
                 hintText: 'Weekend explorers',
                 hintStyle: TextStyle(color: muted.withValues(alpha: .85)),
                 errorText: error,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: slots,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(3),
+              ],
+              onChanged: (_) {
+                if (slotError != null) setState(() => slotError = null);
+              },
+              decoration: InputDecoration(
+                labelText: 'Member slots',
+                helperText: '2–100, including you',
+                errorText: slotError,
                 border: const OutlineInputBorder(),
               ),
             ),

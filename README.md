@@ -164,21 +164,22 @@ completions are labelled **Demo simulation** in history. Normal Firebase
 accounts do not expose either simulation control. Demo history persists
 independently of real users.
 
-Bundled original WAV cues play on navigation, quest start, completion and
-next-task reveal. Mute using the demo header speaker or Settings → Sound
+Bundled original WAV cues play on quest completion and club joins. Navigation,
+quest start and next-task browsing are silent. Mute using the demo header speaker or Settings → Sound
 effects. Normal accounts start with sound off. Playback requires an allowed
 browser user gesture; audio failure never blocks gameplay. Motion respects
 the system reduced-motion preference.
 
 Quests now has **Explore** and **Active** tabs. Started quests remain available
-until completed or explicitly stopped. Switching quests pauses the previous
-timer and GPS route without clearing evidence; opening an Active row resumes
-its timer. GPS still requires an explicit resume/start from the task. Active
+until completed or explicitly stopped. At most two tasks can be active. Timers
+continue while browsing until manually paused; opening a task does not start
+or resume it. GPS pauses when leaving its screen and requires an explicit
+resume/start. Active
 attempts and evidence are session-local; only completed history is persisted.
 
 Tap **Next quest** in the fixed bottom bar or swipe left to browse another
-available task, including after starting a quest. Started tasks are paused
-and retained in Active with their timer and evidence intact. Skipping replaces
+available task, including after starting a quest. Started tasks are
+retained in Active with their running timer and evidence intact. Skipping replaces
 the current task screen, does not start the next task or
 award XP, and excludes locked/active tasks.
 Club tasks already started from the shared list keep their club-specific flow.
@@ -194,10 +195,15 @@ action and its own Leave Group control; leaving an unselected club does not
 change the currently selected club.
 
 Activity tree shows all 26 quests and every prerequisite connection on a
-spacious canvas. Drag to move, pinch or use +/- to zoom, Fit entire tree for
-the overview, and Reset view to return to the entry point. Quest cards remain
-tappable, category-coded, and update their unlock/completion status. There is
-no quest picker.
+spacious, read-only canvas. Drag to explore; nodes and connections cannot be
+clicked and the scale is fixed. Active quests pulse and their directly attached
+links glow. Brief active-task summaries appear beneath the tree. Category icons
+and unlock/completion status remain visible.
+
+Club hosts choose 2–100 member slots, including themselves, when creating a
+club, and can adjust them from Club Activity → Members. Joining a full club
+fails without changing membership. In showcase mode, dummy friends fill the
+chosen capacity; normal accounts never receive simulated members.
 
 Tree cards, category labels and branch lines use the shared category colours:
 Nature green, Creativity purple, Learning blue, Exploration orange, Wellness

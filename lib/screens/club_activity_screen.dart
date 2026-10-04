@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app_state.dart';
 import '../models/quest.dart';
@@ -72,7 +73,28 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
     ],
   ];
 
+  void editMemberSlots() {
+    final club = state.group;
+    showDialog<void>(
+      context: context,
+      builder: (_) => _MemberSlotsDialog(
+        state: state,
+        groupId: club.id,
+        memberLimit: club.memberLimit,
+      ),
+    );
+  }
+
   List<Widget> members() => [
+    if (state.group.hostId == state.you.id)
+      Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: OutlinedButton.icon(
+          onPressed: editMemberSlots,
+          icon: const Icon(Icons.tune_rounded, size: 18),
+          label: Text('MEMBER SLOTS · ${state.group.memberLimit}'),
+        ),
+      ),
     ...state.group.members.map(
       (f) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
@@ -189,7 +211,7 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
                 children: [
                   PageHeading(
                     state.group.name,
-                    '${state.group.members.length} members',
+                    '${state.group.members.length} / ${state.group.memberLimit} members',
                   ),
                   SizedBox(
                     width: double.infinity,
@@ -224,5 +246,66 @@ class _ClubActivityScreenState extends State<ClubActivityScreen> {
               ),
       ),
     ),
+  );
+}
+
+class _MemberSlotsDialog extends StatefulWidget {
+  const _MemberSlotsDialog({
+    required this.state,
+    required this.groupId,
+    required this.memberLimit,
+  });
+  final AppState state;
+  final int groupId, memberLimit;
+  @override
+  State<_MemberSlotsDialog> createState() => _MemberSlotsDialogState();
+}
+
+class _MemberSlotsDialogState extends State<_MemberSlotsDialog> {
+  late final controller = TextEditingController(text: '${widget.memberLimit}');
+  String? error;
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Member slots'),
+    content: TextField(
+      controller: controller,
+      autofocus: true,
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(3),
+      ],
+      decoration: InputDecoration(
+        labelText: 'Member slots',
+        helperText: '2–100, including you',
+        errorText: error,
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('CANCEL'),
+      ),
+      FilledButton(
+        onPressed: () {
+          try {
+            widget.state.setClubMemberLimit(
+              widget.groupId,
+              int.tryParse(controller.text) ?? 0,
+            );
+            Navigator.pop(context);
+          } on FormatException catch (e) {
+            setState(() => error = e.message);
+          }
+        },
+        child: const Text('SAVE'),
+      ),
+    ],
   );
 }

@@ -186,11 +186,8 @@ class QuestDetailScreen extends StatelessWidget {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ActivityTreeScreen(
-                        state: state,
-                        questId: quest.id,
-                        onReturnQuests: onStopTask,
-                      ),
+                      builder: (_) =>
+                          ActivityTreeScreen(state: state, questId: quest.id),
                     ),
                   ),
                   icon: const Icon(Icons.account_tree_outlined, size: 18),

@@ -6,37 +6,32 @@ import '../app_state.dart';
 import '../data/sample_quests.dart';
 import '../models/quest.dart';
 import '../widgets/common.dart';
-import 'quest_detail_screen.dart';
 
 class ActivityTreeScreen extends StatefulWidget {
   const ActivityTreeScreen({
     super.key,
     required this.state,
-    this.questId = 13,
+    this.questId = 1,
     this.embedded = false,
-    this.onReturnQuests,
   });
   final AppState state;
   final int questId;
   final bool embedded;
-  final VoidCallback? onReturnQuests;
   @override
   State<ActivityTreeScreen> createState() => _ActivityTreeScreenState();
 }
 
 class _ActivityTreeScreenState extends State<ActivityTreeScreen>
     with SingleTickerProviderStateMixin {
-  late int selected = widget.questId;
   final camera = TransformationController();
   late final pulse = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 2800),
   );
-  bool positioned = false;
-  bool reducedMotion = false;
+  bool positioned = false, reducedMotion = false;
+  String activeSignature = '';
   Size viewport = Size.zero, mapSize = Size.zero;
   Map<int, Rect> positions = {};
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -54,68 +49,25 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
     return parents.isEmpty ? 0 : 1 + parents.map(depth).reduce(math.max);
   }
 
-  Set<int> relatedTo(int id) {
-    final related = <int>{};
-    void ancestors(int current) {
-      if (!related.add(current)) return;
-      for (final parent in questParents[current] ?? <int>[]) {
-        ancestors(parent);
-      }
+  Set<int> neighbors(Set<int> active) {
+    final related = {...active};
+    for (final entry in questParents.entries) {
+      if (active.contains(entry.key)) related.addAll(entry.value);
+      if (entry.value.any(active.contains)) related.add(entry.key);
     }
-
-    void descendants(int current) {
-      for (final entry in questParents.entries) {
-        if (entry.value.contains(current)) {
-          ancestors(entry.key);
-          descendants(entry.key);
-        }
-      }
-    }
-
-    ancestors(id);
-    descendants(id);
     return related;
   }
 
-  void center(Offset point, double scale) {
+  void focusTasks(List<Quest> active) {
     if (viewport.isEmpty) return;
-    camera.value = Matrix4.diagonal3Values(scale, scale, 1)
+    final target = positions[active.firstOrNull?.id ?? widget.questId]!;
+    camera.value = Matrix4.diagonal3Values(.85, .85, 1)
       ..setTranslationRaw(
-        viewport.width / 2 - point.dx * scale,
-        viewport.height / 2 - point.dy * scale,
+        viewport.width / 2 - target.center.dx * .85,
+        viewport.height / 2 - target.center.dy * .85,
         0,
       );
   }
-
-  void zoom(double factor) {
-    final point = camera.toScene(viewport.center(Offset.zero));
-    center(point, (camera.value.entry(0, 0) * factor).clamp(.12, 2.5));
-  }
-
-  void fitAll() {
-    center(
-      mapSize.center(Offset.zero),
-      math
-          .min(
-            (viewport.width - 48) / mapSize.width,
-            (viewport.height - 48) / mapSize.height,
-          )
-          .clamp(.12, 2.5),
-    );
-  }
-
-  void focusSelected() => center(positions[selected]!.center, .9);
-
-  void openSelected() => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => QuestDetailScreen(
-        state: widget.state,
-        quest: widget.state.quest(selected),
-        onStopTask: widget.onReturnQuests,
-      ),
-    ),
-  );
 
   @override
   void dispose() {
@@ -128,7 +80,14 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.state,
     builder: (_, _) {
-      final related = relatedTo(selected);
+      final active = widget.state.activeQuests;
+      final activeIds = active.map((q) => q.id).toSet();
+      final related = neighbors(activeIds);
+      final signature = activeIds.join(',');
+      if (signature != activeSignature) {
+        activeSignature = signature;
+        positioned = false;
+      }
       final layers = <int, List<int>>{};
       for (final q in widget.state.quests) {
         layers.putIfAbsent(depth(q.id), () => []).add(q.id);
@@ -169,29 +128,10 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
         (layers.keys.reduce(math.max) + 1) * 324 + 128,
         maxBottom + 100,
       );
-      final current = widget.state.quest(selected);
-      final parents = questParents[selected] ?? <int>[];
       return Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: !widget.embedded,
           title: const Text('Activity tree'),
-          actions: [
-            IconButton(
-              tooltip: 'Zoom out',
-              onPressed: () => zoom(.8),
-              icon: const Icon(Icons.remove_rounded),
-            ),
-            IconButton(
-              tooltip: 'Zoom in',
-              onPressed: () => zoom(1.25),
-              icon: const Icon(Icons.add_rounded),
-            ),
-            IconButton(
-              tooltip: 'Fit entire tree',
-              onPressed: fitAll,
-              icon: const Icon(Icons.fullscreen_rounded),
-            ),
-          ],
         ),
         body: SafeArea(
           top: !widget.embedded,
@@ -201,11 +141,12 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
               Expanded(
                 child: LayoutBuilder(
                   builder: (_, constraints) {
+                    if (viewport != constraints.biggest) positioned = false;
                     viewport = constraints.biggest;
                     if (!positioned) {
                       positioned = true;
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) focusSelected();
+                        if (mounted) focusTasks(widget.state.activeQuests);
                       });
                     }
                     return Stack(
@@ -218,7 +159,8 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                                 radius: 1.1,
                                 colors: [
                                   Color.alphaBlend(
-                                    current.color.withValues(alpha: .055),
+                                    (active.firstOrNull?.color ?? green)
+                                        .withValues(alpha: .055),
                                     background,
                                   ),
                                   background,
@@ -231,8 +173,10 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                           key: const ValueKey('quest-tree-map'),
                           transformationController: camera,
                           constrained: false,
-                          minScale: .12,
-                          maxScale: 2.5,
+                          scaleEnabled: false,
+                          panEnabled: true,
+                          minScale: .85,
+                          maxScale: .85,
                           boundaryMargin: const EdgeInsets.all(650),
                           child: SizedBox(
                             width: mapSize.width,
@@ -243,7 +187,7 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                                   child: CustomPaint(
                                     painter: _BranchPainter(
                                       positions: positions,
-                                      related: related,
+                                      activeIds: activeIds,
                                       colors: {
                                         for (final q in widget.state.quests)
                                           q.id: q.color,
@@ -259,36 +203,21 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                                     child: _QuestOrb(
                                       key: ValueKey('tree-task-${entry.key}'),
                                       quest: widget.state.quest(entry.key),
-                                      selected: selected == entry.key,
                                       related: related.contains(entry.key),
                                       pulse: pulse,
                                       reducedMotion: reducedMotion,
-                                      onTap: () =>
-                                          setState(() => selected = entry.key),
                                     ),
                                   ),
                               ],
                             ),
                           ),
                         ),
-                        Positioned(
-                          right: 16,
-                          bottom: 16,
-                          child: IconButton.filledTonal(
-                            tooltip: 'Reset view',
-                            onPressed: focusSelected,
-                            icon: const Icon(
-                              Icons.center_focus_strong_rounded,
-                              size: 20,
-                            ),
-                          ),
-                        ),
                         const Positioned(
                           left: 20,
-                          bottom: 20,
+                          bottom: 16,
                           child: IgnorePointer(
                             child: Text(
-                              'Explore your connections',
+                              'Drag to explore',
                               style: TextStyle(color: muted, fontSize: 11),
                             ),
                           ),
@@ -299,90 +228,85 @@ class _ActivityTreeScreenState extends State<ActivityTreeScreen>
                 ),
               ),
               Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: surface,
                   border: Border(
-                    top: BorderSide(
-                      color: current.color.withValues(alpha: .16),
-                    ),
+                    top: BorderSide(color: green.withValues(alpha: .12)),
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: current.color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            current.title,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        IconButton.filledTonal(
-                          tooltip: 'View quest',
-                          onPressed: openSelected,
-                          icon: const Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 20,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (parents.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        'Unlocks after ${parents.map((id) => widget.state.quest(id).title).join(' + ')}',
-                        style: const TextStyle(
-                          color: muted,
-                          fontSize: 12,
-                          height: 1.4,
-                        ),
+                    const Eyebrow('ACTIVE QUESTS'),
+                    if (active.isEmpty) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'No active quests',
+                        style: TextStyle(color: muted, fontSize: 13),
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 6,
-                      children: Category.values
-                          .map(
-                            (c) => Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 5,
-                                  height: 5,
-                                  decoration: BoxDecoration(
-                                    color: c.color,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  c.label,
-                                  style: const TextStyle(
-                                    color: muted,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
+                    for (final quest in active)
+                      Padding(
+                        key: ValueKey('active-tree-summary-${quest.id}'),
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              quest.categories.first.icon,
+                              color: quest.color,
+                              size: 20,
                             ),
-                          )
-                          .toList(),
-                    ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          quest.title,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        quest.attemptClock.isRunning
+                                            ? 'In progress'
+                                            : 'Paused',
+                                        style: TextStyle(
+                                          color: quest.color,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    quest.description,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: muted,
+                                      fontSize: 12,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -398,16 +322,13 @@ class _QuestOrb extends StatelessWidget {
   const _QuestOrb({
     super.key,
     required this.quest,
-    required this.selected,
     required this.related,
     required this.pulse,
     required this.reducedMotion,
-    required this.onTap,
   });
   final Quest quest;
-  final bool selected, related, reducedMotion;
+  final bool related, reducedMotion;
   final Animation<double> pulse;
-  final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
     final status = quest.isActive
@@ -418,155 +339,140 @@ class _QuestOrb extends StatelessWidget {
         ? 'Locked'
         : 'Available';
     return Semantics(
-      button: true,
-      selected: selected,
       label:
           '${quest.title}, $status, ${quest.categories.map((c) => c.label).join(', ')}',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(80),
-          onTap: onTap,
-          child: Column(
-            children: [
-              SizedBox(
-                height: 88,
-                width: 100,
-                child: AnimatedBuilder(
-                  animation: pulse,
-                  builder: (_, _) {
-                    final wave = reducedMotion
-                        ? .5
-                        : (math.sin(pulse.value * math.pi * 2) + 1) / 2;
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        if (related || quest.isActive)
-                          Container(
-                            key: quest.isActive
-                                ? ValueKey('active-tree-pulse-${quest.id}')
-                                : null,
-                            width: 74 + wave * 12,
-                            height: 74 + wave * 12,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: quest.color.withValues(
-                                  alpha: quest.isActive
-                                      ? .35 + (1 - wave) * .35
-                                      : .12 + (1 - wave) * .16,
-                                ),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: quest.color.withValues(
-                                    alpha: quest.isActive
-                                        ? .15 + wave * .15
-                                        : .06 + wave * .05,
-                                  ),
-                                  blurRadius: quest.isActive
-                                      ? 20 + wave * 12
-                                      : 28,
-                                  spreadRadius: quest.isActive
-                                      ? 2 + wave * 3
-                                      : 3,
-                                ),
-                              ],
+      child: Column(
+        children: [
+          SizedBox(
+            height: 88,
+            width: 100,
+            child: AnimatedBuilder(
+              animation: pulse,
+              builder: (_, _) {
+                final wave = reducedMotion || !quest.isActive
+                    ? .5
+                    : (math.sin(pulse.value * math.pi * 2) + 1) / 2;
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (related || quest.isActive)
+                      Container(
+                        key: quest.isActive
+                            ? ValueKey('active-tree-pulse-${quest.id}')
+                            : null,
+                        width: 74 + wave * 12,
+                        height: 74 + wave * 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: quest.color.withValues(
+                              alpha: quest.isActive
+                                  ? .35 + (1 - wave) * .35
+                                  : .12,
                             ),
                           ),
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color.alphaBlend(
-                              quest.color.withValues(
-                                alpha: quest.isLocked ? .04 : .13,
-                              ),
-                              surface,
-                            ),
-                          ),
-                          child: CustomPaint(
-                            painter: _OrbRingPainter(
-                              quest.categories,
-                              selected,
-                              quest.isLocked,
-                            ),
-                            child: Icon(
-                              quest.categories.first.icon,
-                              size: 27,
+                          boxShadow: [
+                            BoxShadow(
                               color: quest.color.withValues(
-                                alpha: quest.isLocked ? .6 : 1,
+                                alpha: quest.isActive ? .15 + wave * .15 : .06,
                               ),
+                              blurRadius: quest.isActive ? 20 + wave * 12 : 28,
+                              spreadRadius: quest.isActive ? 2 + wave * 3 : 3,
                             ),
-                          ),
-                        ),
-                        if (quest.isLocked)
-                          Positioned(
-                            right: 14,
-                            bottom: 9,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: const BoxDecoration(
-                                color: surface,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.lock_outline_rounded,
-                                size: 11,
-                                color: muted,
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text(
-                  quest.title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.2,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: related
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: .72),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 5),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 6,
-                children: quest.categories
-                    .map(
-                      (c) => Text(
-                        c.label,
-                        style: TextStyle(
-                          color: c.color.withValues(alpha: .85),
-                          fontSize: 9,
+                          ],
                         ),
                       ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                status,
-                style: TextStyle(
-                  fontSize: 9,
-                  color: quest.isLocked ? muted : quest.color,
-                ),
-              ),
-            ],
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color.alphaBlend(
+                          quest.color.withValues(
+                            alpha: quest.isLocked ? .04 : .13,
+                          ),
+                          surface,
+                        ),
+                      ),
+                      child: CustomPaint(
+                        painter: _OrbRingPainter(
+                          quest.categories,
+                          quest.isActive,
+                          quest.isLocked,
+                        ),
+                        child: Icon(
+                          quest.categories.first.icon,
+                          size: 27,
+                          color: quest.color.withValues(
+                            alpha: quest.isLocked ? .6 : 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (quest.isLocked)
+                      Positioned(
+                        right: 14,
+                        bottom: 9,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            color: surface,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.lock_outline_rounded,
+                            size: 11,
+                            color: muted,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              quest.title,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.2,
+                fontWeight: quest.isActive ? FontWeight.w700 : FontWeight.w500,
+                color: related
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: .72),
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 6,
+            children: quest.categories
+                .map(
+                  (c) => Text(
+                    c.label,
+                    style: TextStyle(
+                      color: c.color.withValues(alpha: .85),
+                      fontSize: 9,
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 9,
+              color: quest.isLocked ? muted : quest.color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -611,13 +517,13 @@ class _OrbRingPainter extends CustomPainter {
 class _BranchPainter extends CustomPainter {
   _BranchPainter({
     required this.positions,
-    required this.related,
+    required this.activeIds,
     required this.colors,
     required this.pulse,
     required this.reducedMotion,
   }) : super(repaint: pulse);
   final Map<int, Rect> positions;
-  final Set<int> related;
+  final Set<int> activeIds;
   final Map<int, Color> colors;
   final Animation<double> pulse;
   final bool reducedMotion;
@@ -661,7 +567,7 @@ class _BranchPainter extends CustomPainter {
             end.dy,
           );
         }
-        final active = related.contains(child) && related.contains(parent);
+        final active = activeIds.contains(child) || activeIds.contains(parent);
         final color = colors[child] ?? green;
         if (active) {
           canvas.drawPath(

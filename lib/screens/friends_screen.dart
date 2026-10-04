@@ -106,7 +106,7 @@ class FriendsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${club.members.length} ${club.members.length == 1 ? 'member' : 'members'} · ${club.partyCompletedCount} of ${club.partyTasks.length} shared tasks done',
+                  '${club.members.length} / ${club.memberLimit} members · ${club.partyCompletedCount} of ${club.partyTasks.length} shared tasks done',
                   style: const TextStyle(color: muted, fontSize: 12),
                 ),
                 const SizedBox(height: 18),

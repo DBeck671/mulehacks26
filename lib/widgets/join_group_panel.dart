@@ -27,7 +27,8 @@ class _JoinGroupPanelState extends State<JoinGroupPanel> {
     setState(() {
       isError =
           result == JoinGroupResult.invalidCode ||
-          result == JoinGroupResult.unknownCode;
+          result == JoinGroupResult.unknownCode ||
+          result == JoinGroupResult.full;
       message = switch (result) {
         JoinGroupResult.joined =>
           'Joined ${widget.state.group.name}! Your XP comes with you.',
@@ -36,6 +37,8 @@ class _JoinGroupPanelState extends State<JoinGroupPanel> {
         JoinGroupResult.invalidCode => 'Enter a code like SQ-7319 or INV-7319.',
         JoinGroupResult.unknownCode =>
           'Code not found. Check it and try again.',
+        JoinGroupResult.full =>
+          'This club is full. Ask the host to add more member slots.',
       };
       if (result == JoinGroupResult.joined) code.clear();
     });

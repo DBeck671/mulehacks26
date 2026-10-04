@@ -14,7 +14,7 @@ from urllib.request import Request, urlopen
 
 KEY_FILE = Path(__file__).resolve().parents[1] / 'config/gemini.local.json'
 MAX_BODY = 9 * 1024 * 1024
-ORIGINS = {f'http://{host}:{port}' for host in ('localhost', '127.0.0.1') for port in (8081, 8083)}
+ORIGINS = {f'http://{host}:{port}' for host in ('localhost', '127.0.0.1') for port in (8081, 8083, 8085)}
 HOSTS = {'localhost:8084', '127.0.0.1:8084'}
 BUSY = threading.BoundedSemaphore(2)
 RATE_LOCK = threading.Lock()
